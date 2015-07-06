@@ -1,0 +1,9 @@
+# Load our data sources, and pass control to Tomcat (catalina) when we're done
+
+exec: catalina.sh run
+data_sources:
+  - file
+  - environment
+template_sources:
+  - file
+

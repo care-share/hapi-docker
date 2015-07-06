@@ -6,13 +6,12 @@ This file contains instructions for running a HAPI-FHIR server using Docker. The
 
 * [Maven installed](http://www.mkyong.com/maven/how-to-install-maven-in-ubuntu/)
 * [Docker installed](http://docs.docker.com/installation/ubuntulinux/)
-* [Docker Compose installed](https://docs.docker.com/compose/install/) (optional)
+* [Docker Compose installed](https://docs.docker.com/compose/install/)
 * Make sure that you do not have an application that is already running on port 8080
 
 ## Configuration
 
-1. In the "`docker-config/`" directory, copy the "`tomcat-users.xml.example`" file and create a new "`tomcat-users.xml`" file
-2. **Edit "`tomcat-users.xml`" and change the passwords marked as "`CHANGEME`"**
+1. (Optional) In the "`docker/`" directory, edit the "`common.env`" file and change settings as desired
 
 ## Running
 
@@ -36,7 +35,7 @@ Using a terminal in the project's root directory:
 
         $ docker-compose ps
 
-5. Check http://localhost:8080 to see the web service
+5. Check http://localhost:8080/hapi-fhir to see the web service
 
 ## Debugging
 
