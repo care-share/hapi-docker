@@ -20,15 +20,14 @@ package ca.uhn.fhir.rest.method;
  * #L%
  */
 
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.*;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
 import org.apache.commons.lang3.ObjectUtils;
-import org.hl7.fhir.instance.model.IBaseResource;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IResource;
@@ -114,7 +113,7 @@ public class HistoryMethodBinding extends BaseResourceReturningMethodBinding {
 	// ObjectUtils.equals is replaced by a JDK7 method..
 	@SuppressWarnings("deprecation")
 	@Override
-	public boolean incomingServerRequestMatchesMethod(Request theRequest) {
+	public boolean incomingServerRequestMatchesMethod(RequestDetails theRequest) {
 		if (!Constants.PARAM_HISTORY.equals(theRequest.getOperation())) {
 			return false;
 		}
@@ -186,15 +185,15 @@ public class HistoryMethodBinding extends BaseResourceReturningMethodBinding {
 			}
 			
 			@Override
-			public List<IResource> getResources(int theFromIndex, int theToIndex) {
-				List<IResource> retVal = resources.getResources(theFromIndex, theToIndex);
+			public List<IBaseResource> getResources(int theFromIndex, int theToIndex) {
+				List<IBaseResource> retVal = resources.getResources(theFromIndex, theToIndex);
 				int index = theFromIndex;
-				for (IResource nextResource : retVal) {
-					if (nextResource.getId() == null || isBlank(nextResource.getId().getIdPart())) {
+				for (IBaseResource nextResource : retVal) {
+					if (nextResource.getIdElement() == null || isBlank(nextResource.getIdElement().getIdPart())) {
 						throw new InternalErrorException("Server provided resource at index " + index + " with no ID set (using IResource#setId(IdDt))");
 					}
-					if (isBlank(nextResource.getId().getVersionIdPart())) {
-						IdDt versionId = (IdDt) ResourceMetadataKeyEnum.VERSION_ID.get(nextResource);
+					if (isBlank(nextResource.getIdElement().getVersionIdPart()) && nextResource instanceof IResource) {
+						IdDt versionId = (IdDt) ResourceMetadataKeyEnum.VERSION_ID.get((IResource) nextResource);
 						if (versionId == null || versionId.isEmpty()) {
 							throw new InternalErrorException("Server provided resource at index " + index + " with no Version ID set (using IResource#setId(IdDt))");
 						}

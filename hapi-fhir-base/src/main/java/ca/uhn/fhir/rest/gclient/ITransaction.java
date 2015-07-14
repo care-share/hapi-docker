@@ -23,16 +23,16 @@ package ca.uhn.fhir.rest.gclient;
 import java.util.List;
 
 import org.hl7.fhir.instance.model.api.IBaseBundle;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.model.api.Bundle;
-import ca.uhn.fhir.model.api.IResource;
 
 public interface ITransaction {
 
 	/**
 	 * Use a list of resources as the transaction input
 	 */
-	ITransactionTyped<List<IResource>> withResources(List<IResource> theResources);
+	ITransactionTyped<List<IBaseResource>> withResources(List<? extends IBaseResource> theResources);
 	
 	/**
 	 * Use a DSTU1 Bundle (Atom) as the transaction input

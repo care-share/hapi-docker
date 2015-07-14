@@ -30,7 +30,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.hl7.fhir.instance.model.IBaseResource;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
@@ -160,7 +160,7 @@ abstract class BaseAddOrDeleteTagsMethodBinding extends BaseMethodBinding<Void> 
 	}
 
 	@Override
-	public void invokeServer(RestfulServer theServer, Request theRequest) throws BaseServerResponseException, IOException {
+	public void invokeServer(RestfulServer theServer, RequestDetails theRequest) throws BaseServerResponseException, IOException {
 		Object[] params = createParametersForServerRequest(theRequest, null);
 
 		params[myIdParamIndex] = theRequest.getId();
@@ -199,7 +199,7 @@ abstract class BaseAddOrDeleteTagsMethodBinding extends BaseMethodBinding<Void> 
 	}
 
 	@Override
-	public boolean incomingServerRequestMatchesMethod(Request theRequest) {
+	public boolean incomingServerRequestMatchesMethod(RequestDetails theRequest) {
 		if (theRequest.getRequestType() != RequestTypeEnum.POST) {
 			return false;
 		}

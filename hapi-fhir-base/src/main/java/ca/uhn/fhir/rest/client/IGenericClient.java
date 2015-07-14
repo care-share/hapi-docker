@@ -23,7 +23,7 @@ package ca.uhn.fhir.rest.client;
 import java.util.List;
 import java.util.Map;
 
-import org.hl7.fhir.instance.model.IBaseResource;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.api.IQueryParameterType;
@@ -35,29 +35,48 @@ import ca.uhn.fhir.model.primitive.UriDt;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
-import ca.uhn.fhir.rest.client.exceptions.FhirClientInnapropriateForServerException;
+import ca.uhn.fhir.rest.client.exceptions.FhirClientInappropriateForServerException;
 import ca.uhn.fhir.rest.gclient.ICreate;
 import ca.uhn.fhir.rest.gclient.IDelete;
+import ca.uhn.fhir.rest.gclient.IFetchConformanceUntyped;
 import ca.uhn.fhir.rest.gclient.IGetPage;
 import ca.uhn.fhir.rest.gclient.IGetTags;
 import ca.uhn.fhir.rest.gclient.IHistory;
+import ca.uhn.fhir.rest.gclient.IMeta;
 import ca.uhn.fhir.rest.gclient.IOperation;
 import ca.uhn.fhir.rest.gclient.IRead;
 import ca.uhn.fhir.rest.gclient.ITransaction;
 import ca.uhn.fhir.rest.gclient.IUntypedQuery;
 import ca.uhn.fhir.rest.gclient.IUpdate;
+import ca.uhn.fhir.rest.gclient.IValidate;
 
 public interface IGenericClient extends IRestfulClient {
 
 	/**
 	 * Retrieves and returns the server conformance statement
+	 * 
+	 * @deprecated Use {@link #fetchConformance()} instead
 	 */
+	@Deprecated
 	BaseConformance conformance();
 
+	/**
+	 * Retrieves the server's conformance statement
+	 */
+	IFetchConformanceUntyped fetchConformance();
+	
 	/**
 	 * Fluent method for the "create" operation, which creates a new resource instance on the server
 	 */
 	ICreate create();
+
+	/**
+	 * Fluent method for the "meta" operations, which can be used to get, add and remove tags and other
+	 * Meta elements from a resource or across the server.
+	 * 
+	 * @since 1.1
+	 */
+	IMeta meta();
 
 	/**
 	 * Implementation of the "type create" method.
@@ -107,7 +126,7 @@ public interface IGenericClient extends IRestfulClient {
 	 * 
 	 * @throws FhirClientConnectionException
 	 *             if the conformance statement cannot be read, or if the client
-	 * @throws FhirClientInnapropriateForServerException
+	 * @throws FhirClientInappropriateForServerException
 	 *             If the conformance statement indicates that the server is inappropriate for this client (e.g. it implements the wrong version of FHIR)
 	 */
 	void forceConformanceCheck() throws FhirClientConnectionException;
@@ -224,11 +243,12 @@ public interface IGenericClient extends IRestfulClient {
 	 *            The absolute URL, e.g. "http://example.com/fhir/Patient/123"
 	 * @return The returned resource from the server
 	 */
-	IResource read(UriDt theUrl);
+	IBaseResource read(UriDt theUrl);
 
 	/**
 	 * Register a new interceptor for this client. An interceptor can be used to add additional logging, or add security headers, or pre-process responses, etc.
 	 */
+	@Override
 	void registerInterceptor(IClientInterceptor theInterceptor);
 
 	IUntypedQuery search();
@@ -270,6 +290,11 @@ public interface IGenericClient extends IRestfulClient {
 	ITransaction transaction();
 
 	/**
+	 * Validate a resource
+	 */
+	IValidate validate();
+
+	/**
 	 * Implementation of the "transaction" method.
 	 * 
 	 * @param theResources
@@ -279,11 +304,12 @@ public interface IGenericClient extends IRestfulClient {
 	 * 
 	 */
 	@Deprecated
-	List<IResource> transaction(List<IResource> theResources);
+	List<IBaseResource> transaction(List<IBaseResource> theResources);
 
 	/**
 	 * Remove an intercaptor that was previously registered using {@link IRestfulClient#registerInterceptor(IClientInterceptor)}
 	 */
+	@Override
 	void unregisterInterceptor(IClientInterceptor theInterceptor);
 
 	/**
@@ -365,4 +391,6 @@ public interface IGenericClient extends IRestfulClient {
 	 */
 	<T extends IBaseResource> T vread(Class<T> theType, String theId, String theVersionId);
 
+
+	
 }

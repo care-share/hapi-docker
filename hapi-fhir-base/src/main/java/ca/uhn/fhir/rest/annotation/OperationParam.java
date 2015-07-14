@@ -25,13 +25,18 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.hl7.fhir.instance.model.IBase;
+import org.hl7.fhir.instance.model.api.IBase;
 
 /**
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value=ElementType.PARAMETER)
 public @interface OperationParam {
+
+	/**
+	 * Value for {@link OperationParam#max()} indicating no maximum
+	 */
+	final int MAX_UNLIMITED = -1;
 
 	/**
 	 * The name of the parameter
@@ -43,5 +48,18 @@ public @interface OperationParam {
 	 * annotations specified as values for {@link Operation#returnParameters()}
 	 */
 	Class<? extends IBase> type() default IBase.class;
+	
+	/**
+	 * The minimum number of repetitions allowed for this child
+	 */
+	int min() default 0;
+
+	/**
+	 * The maximum number of repetitions allowed for this child. Should be
+	 * set to {@link #MAX_UNLIMITED} if there is no limit to the number of
+	 * repetitions.
+	 */
+	int max() default MAX_UNLIMITED;
+
 	
 }

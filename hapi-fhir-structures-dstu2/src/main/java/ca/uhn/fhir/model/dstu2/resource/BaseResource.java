@@ -23,6 +23,7 @@ package ca.uhn.fhir.model.dstu2.resource;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.hl7.fhir.instance.model.api.IIdType;
 
 import ca.uhn.fhir.model.api.BaseElement;
 import ca.uhn.fhir.model.api.IResource;
@@ -91,6 +92,11 @@ public abstract class BaseResource extends BaseElement implements IResource {
 	}
 
 	@Override
+	public IIdType getIdElement() {
+		return getId();
+	}
+
+	@Override
 	public CodeDt getLanguage() {
 		if (myLanguage == null) {
 			myLanguage = new CodeDt();
@@ -121,13 +127,23 @@ public abstract class BaseResource extends BaseElement implements IResource {
 	public void setId(IdDt theId) {
 		myId = theId;
 	}
+	
+	public BaseResource setId(IIdType theId) {
+		if (theId instanceof IdDt) {
+			myId = (IdDt) theId;
+		} else if (theId != null) {
+			myId = new IdDt(theId.getValue());
+		}
+		return this;
+	}
 
-	public void setId(String theId) {
+	public BaseResource setId(String theId) {
 		if (theId == null) {
 			myId = null;
 		} else {
 			myId = new IdDt(theId);
 		}
+		return this;
 	}
 
 	@Override

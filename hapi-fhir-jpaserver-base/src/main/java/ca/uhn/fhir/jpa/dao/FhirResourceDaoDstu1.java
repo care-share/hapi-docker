@@ -24,15 +24,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.hl7.fhir.instance.model.api.IBaseResource;
+
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.model.base.composite.BaseResourceReferenceDt;
 import ca.uhn.fhir.util.FhirTerser;
 
-public class FhirResourceDaoDstu1<T extends IResource> extends BaseFhirResourceDao<T> {
+public class FhirResourceDaoDstu1<T extends IResource> extends BaseHapiFhirResourceDao<T> {
 
-	protected List<Object> getIncludeValues(FhirTerser t, Include next, IResource nextResource, RuntimeResourceDefinition def) {
+	protected List<Object> getIncludeValues(FhirTerser t, Include next, IBaseResource nextResource, RuntimeResourceDefinition def) {
 		List<Object> values;
 		if ("*".equals(next.getValue())) {
 			values = new ArrayList<Object>();

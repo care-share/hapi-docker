@@ -47,8 +47,13 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.NotImplementedOperationException;
 import ca.uhn.fhir.util.FhirTerser;
 
-public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
+public class FhirSystemDaoDstu1 extends BaseHapiFhirSystemDao<List<IResource>> {
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(FhirSystemDaoDstu1.class);
+
+	@Override
+	public MetaDt metaGetOperation() {
+		throw new NotImplementedOperationException("meta not supported in DSTU1");
+	}
 
 	@Transactional(propagation = Propagation.REQUIRED)
 	@Override
@@ -60,14 +65,18 @@ public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
 
 		for (int i = 0; i < theResources.size(); i++) {
 			IResource res = theResources.get(i);
-			if (res.getId().hasIdPart() && !res.getId().hasResourceType()) {
+			if (res.getId().hasIdPart() && !res.getId().hasResourceType() && !isPlaceholder(res.getId())) {
 				res.setId(new IdDt(toResourceName(res.getClass()), res.getId().getIdPart()));
 			}
 
 			/*
 			 * Ensure that the bundle doesn't have any duplicates, since this causes all kinds of weirdness
 			 */
-			if (res.getId().hasResourceType() && res.getId().hasIdPart()) {
+			if (isPlaceholder(res.getId())) {
+				if (!allIds.add(res.getId())) {
+					throw new InvalidRequestException("Transaction bundle contains multiple resources with ID: " + res.getId());
+				}
+			} else if (res.getId().hasResourceType() && res.getId().hasIdPart()) {
 				IdDt nextId = res.getId().toUnqualifiedVersionless();
 				if (!allIds.add(nextId)) {
 					throw new InvalidRequestException("Transaction bundle contains multiple resources with ID: " + nextId);
@@ -114,14 +123,14 @@ public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
 			} else if (nextResouceOperationIn == BundleEntryTransactionMethodEnum.PUT || nextResouceOperationIn == BundleEntryTransactionMethodEnum.DELETE) {
 				if (candidateMatches == null || candidateMatches.size() == 0) {
 					if (nextId == null || StringUtils.isBlank(nextId.getIdPart())) {
-						throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseFhirSystemDao.class, "transactionOperationFailedNoId", nextResouceOperationIn.name()));
+						throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirSystemDao.class, "transactionOperationFailedNoId", nextResouceOperationIn.name()));
 					}
 					entity = tryToLoadEntity(nextId);
 					if (entity == null) {
 						if (nextResouceOperationIn == BundleEntryTransactionMethodEnum.PUT) {
 							ourLog.debug("Attempting to UPDATE resource with unknown ID '{}', will CREATE instead", nextId);
 						} else if (candidateMatches == null) {
-							throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseFhirSystemDao.class, "transactionOperationFailedUnknownId", nextResouceOperationIn.name(), nextId));
+							throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirSystemDao.class, "transactionOperationFailedUnknownId", nextResouceOperationIn.name(), nextId));
 						} else {
 							ourLog.debug("Resource with match URL [{}] already exists, will be NOOP", matchUrl);
 							persistedResources.add(null);
@@ -132,9 +141,9 @@ public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
 				} else if (candidateMatches.size() == 1) {
 					entity = loadFirstEntityFromCandidateMatches(candidateMatches);
 				} else {
-					throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseFhirSystemDao.class, "transactionOperationWithMultipleMatchFailure", nextResouceOperationIn.name(), matchUrl, candidateMatches.size()));
+					throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirSystemDao.class, "transactionOperationWithMultipleMatchFailure", nextResouceOperationIn.name(), matchUrl, candidateMatches.size()));
 				}
-			} else if (nextId.isEmpty()) {
+			} else if (nextId.isEmpty() || isPlaceholder(nextId)) {
 				entity = null;
 			} else {
 				entity = tryToLoadEntity(nextId);
@@ -144,7 +153,7 @@ public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
 			if (entity == null) {
 				nextResouceOperationOut = BundleEntryTransactionMethodEnum.POST;
 				entity = toEntity(nextResource);
-				if (nextId.isEmpty() == false && nextId.getIdPart().startsWith("cid:")) {
+				if (nextId.isEmpty() == false && "cid:".equals(nextId.getBaseUrl())) {
 					ourLog.debug("Resource in transaction has ID[{}], will replace with server assigned ID", nextId.getIdPart());
 				} else if (nextResouceOperationIn == BundleEntryTransactionMethodEnum.POST) {
 					if (nextId.isEmpty() == false) {
@@ -160,7 +169,7 @@ public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
 							continue;
 						}
 						if (candidateMatches.size() > 1) {
-							throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseFhirSystemDao.class, "transactionOperationWithMultipleMatchFailure", BundleEntryTransactionMethodEnum.POST.name(), matchUrl, candidateMatches.size()));
+							throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirSystemDao.class, "transactionOperationWithMultipleMatchFailure", BundleEntryTransactionMethodEnum.POST.name(), matchUrl, candidateMatches.size()));
 						}
 					}
 				} else {
@@ -209,10 +218,11 @@ public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
 				if (nextId.toUnqualifiedVersionless().equals(newId)) {
 					ourLog.info("Transaction resource ID[{}] is being updated", newId);
 				} else {
-					if (!nextId.getIdPart().startsWith("#")) {
-						nextId = new IdDt(resourceName + '/' + nextId.getIdPart());
+					if (isPlaceholder(nextId)) {
+						// nextId = new IdDt(resourceName, nextId.getIdPart());
 						ourLog.info("Transaction resource ID[{}] has been assigned new ID[{}]", nextId, newId);
 						idConversions.put(nextId, newId);
+						idConversions.put(new IdDt(resourceName + "/" + nextId.getValue()), newId);
 					}
 				}
 			}
@@ -262,10 +272,11 @@ public class FhirSystemDaoDstu1 extends BaseFhirSystemDao<List<IResource>> {
 		return retVal;
 	}
 
-	@Override
-	public MetaDt metaGetOperation() {
-		throw new NotImplementedOperationException("meta not supported in DSTU1");
+	private static boolean isPlaceholder(IdDt theId) {
+		if ("cid:".equals(theId.getBaseUrl())) {
+			return true;
+		}
+		return false;
 	}
-
 
 }

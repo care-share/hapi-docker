@@ -20,9 +20,8 @@ package ca.uhn.fhir.rest.gclient;
  * #L%
  */
 
-import ca.uhn.fhir.model.api.Bundle;
 
-public interface IGetPageTyped extends IClientExecutable<IGetPageTyped, Bundle> {
+public interface IGetPageTyped<T> extends IClientExecutable<IGetPageTyped<T>, T> {
 	
 	// nothing for now
 

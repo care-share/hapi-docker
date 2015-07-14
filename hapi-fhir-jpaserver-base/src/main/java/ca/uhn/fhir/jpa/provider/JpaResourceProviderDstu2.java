@@ -24,9 +24,16 @@ import javax.servlet.http.HttpServletRequest;
 
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.model.api.IResource;
+import ca.uhn.fhir.model.base.resource.BaseOperationOutcome.BaseIssue;
 import ca.uhn.fhir.model.dstu2.composite.MetaDt;
+import ca.uhn.fhir.model.dstu2.resource.OperationOutcome;
+import ca.uhn.fhir.model.dstu2.resource.OperationOutcome.Issue;
 import ca.uhn.fhir.model.dstu2.resource.Parameters;
+import ca.uhn.fhir.model.dstu2.valueset.IssueSeverityEnum;
+import ca.uhn.fhir.model.dstu2.valueset.IssueTypeEnum;
 import ca.uhn.fhir.model.primitive.IdDt;
+import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.parser.IParserErrorHandler;
 import ca.uhn.fhir.rest.annotation.ConditionalUrlParam;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.Delete;
@@ -35,8 +42,13 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Update;
+import ca.uhn.fhir.rest.annotation.Validate;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.ValidationModeEnum;
+import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.validation.FhirValidator;
+import ca.uhn.fhir.validation.ValidationResult;
 
 public class JpaResourceProviderDstu2<T extends IResource> extends BaseJpaResourceProvider<T> {
 
@@ -78,6 +90,53 @@ public class JpaResourceProviderDstu2<T extends IResource> extends BaseJpaResour
 		}
 	}
 
+	//@formatter:off
+	@Operation(name="$meta", idempotent=true, returnParameters= {
+		@OperationParam(name="return", type=MetaDt.class)
+	})
+	//@formatter:on
+	public Parameters meta() {
+		Parameters parameters = new Parameters();
+		MetaDt metaGetOperation = getDao().metaGetOperation();
+		parameters.addParameter().setName("return").setValue(metaGetOperation);
+		return parameters;
+	}
+
+	//@formatter:off
+	@Operation(name="$meta", idempotent=true, returnParameters= {
+		@OperationParam(name="return", type=MetaDt.class)
+	})
+	//@formatter:on
+	public Parameters meta(@IdParam IdDt theId) {
+		Parameters parameters = new Parameters();
+		MetaDt metaGetOperation = getDao().metaGetOperation(theId);
+		parameters.addParameter().setName("return").setValue(metaGetOperation);
+		return parameters;
+	}
+
+	//@formatter:off
+	@Operation(name="$meta-add", idempotent=true, returnParameters= {
+		@OperationParam(name="return", type=MetaDt.class)
+	})
+	//@formatter:on
+	public Parameters metaAdd(@IdParam IdDt theId, @OperationParam(name = "meta") MetaDt theMeta) {
+		Parameters parameters = new Parameters();
+		MetaDt metaAddOperation = getDao().metaAddOperation(theId, theMeta);
+		parameters.addParameter().setName("return").setValue(metaAddOperation);
+		return parameters;
+	}
+
+	//@formatter:off
+	@Operation(name="$meta-delete", idempotent=true, returnParameters= {
+		@OperationParam(name="return", type=MetaDt.class)
+	})
+	//@formatter:on
+	public Parameters metaDelete(@IdParam IdDt theId, @OperationParam(name = "meta") MetaDt theMeta) {
+		Parameters parameters = new Parameters();
+		parameters.addParameter().setName("return").setValue(getDao().metaDeleteOperation(theId, theMeta));
+		return parameters;
+	}
+
 	@Update
 	public MethodOutcome update(HttpServletRequest theRequest, @ResourceParam T theResource, @IdParam IdDt theId, @ConditionalUrlParam String theConditional) {
 		startRequest(theRequest);
@@ -97,48 +156,47 @@ public class JpaResourceProviderDstu2<T extends IResource> extends BaseJpaResour
 		}
 	}
 
-	//@formatter:off
-	@Operation(name="$meta", idempotent=true, returnParameters= {
-		@OperationParam(name="return", type=MetaDt.class)
-	})
-	//@formatter:on
-	public Parameters meta() {
-		Parameters parameters = new Parameters();
-		parameters.addParameter().setName("return").setValue(getDao().metaGetOperation());
-		return parameters;
+	@Validate
+	public MethodOutcome validate(@ResourceParam T theResource, @ResourceParam String theRawResource, @ResourceParam EncodingEnum theEncoding, @Validate.Mode ValidationModeEnum theMode,
+			@Validate.Profile String theProfile) {
+		return validate(theResource, null, theRawResource, theEncoding, theMode, theProfile);
 	}
+		
+	@Validate
+	public MethodOutcome validate(@ResourceParam T theResource, @IdParam IdDt theId, @ResourceParam String theRawResource, @ResourceParam EncodingEnum theEncoding, @Validate.Mode ValidationModeEnum theMode,
+			@Validate.Profile String theProfile) {
 
-	//@formatter:off
-	@Operation(name="$meta", idempotent=true, returnParameters= {
-		@OperationParam(name="return", type=MetaDt.class)
-	})
-	//@formatter:on
-	public Parameters meta(@IdParam IdDt theId) {
-		Parameters parameters = new Parameters();
-		parameters.addParameter().setName("return").setValue(getDao().metaGetOperation(theId));
-		return parameters;
-	}
+		final OperationOutcome oo = new OperationOutcome();
 
-	//@formatter:off
-	@Operation(name="$meta-add", idempotent=true, returnParameters= {
-		@OperationParam(name="return", type=MetaDt.class)
-	})
-	//@formatter:on
-	public Parameters metaAdd(@IdParam IdDt theId, @OperationParam(name = "meta") MetaDt theMeta) {
-		Parameters parameters = new Parameters();
-		parameters.addParameter().setName("return").setValue(getDao().metaAddOperation(theId, theMeta));
-		return parameters;
-	}
+		IParser parser = theEncoding.newParser(getContext());
+		parser.setParserErrorHandler(new IParserErrorHandler() {
 
-	//@formatter:off
-	@Operation(name="$meta-delete", idempotent=true, returnParameters= {
-		@OperationParam(name="return", type=MetaDt.class)
-	})
-	//@formatter:on
-	public Parameters metaDelete(@IdParam IdDt theId, @OperationParam(name = "meta") MetaDt theMeta) {
-		Parameters parameters = new Parameters();
-		parameters.addParameter().setName("return").setValue(getDao().metaDeleteOperation(theId, theMeta));
-		return parameters;
+			@Override
+			public void unknownAttribute(IParseLocation theLocation, String theAttributeName) {
+				oo.addIssue().setSeverity(IssueSeverityEnum.ERROR).setCode(IssueTypeEnum.INVALID_CONTENT).setDetails("Unknown attribute found: " + theAttributeName);
+			}
+
+			@Override
+			public void unknownElement(IParseLocation theLocation, String theElementName) {
+				oo.addIssue().setSeverity(IssueSeverityEnum.ERROR).setCode(IssueTypeEnum.INVALID_CONTENT).setDetails("Unknown element found: " + theElementName);
+			}
+		});
+
+		FhirValidator validator = getContext().newValidator();
+		validator.setValidateAgainstStandardSchema(true);
+		validator.setValidateAgainstStandardSchematron(true);
+		ValidationResult result = validator.validateWithResult(theResource);
+		OperationOutcome operationOutcome = (OperationOutcome) result.getOperationOutcome();
+		for (BaseIssue next : operationOutcome.getIssue()) {
+			oo.getIssue().add((Issue) next);
+		}
+
+		// This method returns a MethodOutcome object
+		MethodOutcome retVal = new MethodOutcome();
+		oo.addIssue().setSeverity(IssueSeverityEnum.INFORMATION).setDetails("Validation succeeded");
+		retVal.setOperationOutcome(oo);
+
+		return retVal;
 	}
 
 }

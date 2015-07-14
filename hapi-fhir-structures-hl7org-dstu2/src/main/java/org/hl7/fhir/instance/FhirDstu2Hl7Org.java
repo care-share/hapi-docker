@@ -2,7 +2,7 @@ package org.hl7.fhir.instance;
 
 /*
  * #%L
- * HAPI FHIR Structures - DSTU2 (FHIR v0.4.0)
+ * HAPI FHIR Structures - HL7.org DSTU2
  * %%
  * Copyright (C) 2014 - 2015 University Health Network
  * %%
@@ -22,12 +22,16 @@ package org.hl7.fhir.instance;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Date;
 
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.instance.conf.ServerConformanceProvider;
 import org.hl7.fhir.instance.conf.ServerProfileProvider;
-import org.hl7.fhir.instance.model.Profile;
 import org.hl7.fhir.instance.model.Reference;
+import org.hl7.fhir.instance.model.Resource;
+import org.hl7.fhir.instance.model.StructureDefinition;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IPrimitiveType;
 
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
@@ -38,6 +42,7 @@ import ca.uhn.fhir.model.base.composite.BaseCodingDt;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.IVersionSpecificBundleFactory;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import ca.uhn.fhir.rest.server.provider.dstu2hl7org.Dstu2Hl7OrgBundleFactory;
 
 public class FhirDstu2Hl7Org implements IFhirVersion {
 
@@ -49,8 +54,8 @@ public class FhirDstu2Hl7Org implements IFhirVersion {
 	}
 
 	@Override
-	public Profile generateProfile(RuntimeResourceDefinition theRuntimeResourceDefinition, String theServerBase) {
-		Profile retVal = new Profile();
+	public StructureDefinition generateProfile(RuntimeResourceDefinition theRuntimeResourceDefinition, String theServerBase) {
+		StructureDefinition retVal = new StructureDefinition();
 
 		RuntimeResourceDefinition def = theRuntimeResourceDefinition;
 
@@ -88,7 +93,7 @@ public class FhirDstu2Hl7Org implements IFhirVersion {
 
 	@Override
 	public String getPathToSchemaDefinitions() {
-		return "ca/uhn/fhir/model/dstu2/schema";
+		return "/org/hl7/fhir/instance/model/schema";
 	}
 
 	@Override
@@ -109,7 +114,12 @@ public class FhirDstu2Hl7Org implements IFhirVersion {
 
 	@Override
 	public IVersionSpecificBundleFactory newBundleFactory(FhirContext theContext) {
-		throw new UnsupportedOperationException();
+		return new Dstu2Hl7OrgBundleFactory(theContext);
+	}
+
+	@Override
+	public IPrimitiveType<Date> getLastUpdated(IBaseResource theResource) {
+		return ((Resource)theResource).getMeta().getLastUpdatedElement();
 	}
 
 }

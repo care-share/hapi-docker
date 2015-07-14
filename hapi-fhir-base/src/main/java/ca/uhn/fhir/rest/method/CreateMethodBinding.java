@@ -20,7 +20,6 @@ package ca.uhn.fhir.rest.method;
  * #L%
  */
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Set;
@@ -53,18 +52,6 @@ public class CreateMethodBinding extends BaseOutcomeReturningMethodBindingWithRe
 	protected Set<RequestTypeEnum> provideAllowableRequestTypes() {
 		return Collections.singleton(RequestTypeEnum.POST);
 	}
-
-	@Override
-	protected IResource parseIncomingServerResource(Request theRequest) throws IOException {
-		IResource retVal = super.parseIncomingServerResource(theRequest);
-		
-		if (theRequest.getId() != null && theRequest.getId().hasIdPart()) {
-			retVal.setId(theRequest.getId());
-		}
-		
-		return retVal;
-	}
-
 	
 	@Override
 	protected BaseHttpClientInvocation createClientInvocation(Object[] theArgs, IResource theResource) {

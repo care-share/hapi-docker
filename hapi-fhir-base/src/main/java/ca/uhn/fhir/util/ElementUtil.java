@@ -23,6 +23,8 @@ package ca.uhn.fhir.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hl7.fhir.instance.model.api.IBase;
+
 import ca.uhn.fhir.model.api.ICompositeElement;
 import ca.uhn.fhir.model.api.IElement;
 
@@ -36,12 +38,25 @@ public class ElementUtil {
 		for (int i = 0; i < theElements.length; i++) {
 			Object next = theElements[i];
 			if (next instanceof List) {
-				if (!isEmpty((List<? extends IElement>) next)) {
+				if (!isEmpty((List<? extends IBase>) next)) {
 					return false;
 				}
 			} else if (next instanceof String && (!((String)next).isEmpty())) {
 				return false;
-			} else if (next != null && !((IElement) next).isEmpty()) {
+			} else if (next != null && !((IBase) next).isEmpty()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static boolean isEmpty(IBase... theElements) {
+		if (theElements == null) {
+			return true;
+		}
+		for (int i = 0; i < theElements.length; i++) {
+			IBase next = theElements[i];
+			if (next != null && !next.isEmpty()) {
 				return false;
 			}
 		}
@@ -53,7 +68,7 @@ public class ElementUtil {
 			return true;
 		}
 		for (int i = 0; i < theElements.length; i++) {
-			IElement next = theElements[i];
+			IBase next = theElements[i];
 			if (next != null && !next.isEmpty()) {
 				return false;
 			}
@@ -61,12 +76,12 @@ public class ElementUtil {
 		return true;
 	}
 
-	public static boolean isEmpty(List<? extends IElement> theElements) {
+	public static boolean isEmpty(List<? extends IBase> theElements) {
 		if (theElements == null) {
 			return true;
 		}
 		for (int i = 0; i < theElements.size(); i++) {
-			IElement next = theElements.get(i);
+			IBase next = theElements.get(i);
 			if (next != null && !next.isEmpty()) {
 				return false;
 			}
@@ -75,7 +90,7 @@ public class ElementUtil {
 	}
 
 	/**
-	 * @param theType Can be null
+	 * Note that this method does not work on HL7.org structures
 	 */
 	public static <T extends IElement> List<T> allPopulatedChildElements(Class<T> theType, Object... theElements) {
 		ArrayList<T> retVal = new ArrayList<T>();
@@ -86,7 +101,7 @@ public class ElementUtil {
 				addElement(retVal, (IElement) next, theType);
 			} else if (next instanceof List) {
 				for (Object nextElement : ((List<?>)next)) {
-					if (!(nextElement instanceof IElement)) {
+					if (!(nextElement instanceof IBase)) {
 						throw new IllegalArgumentException("Found element of "+nextElement.getClass());
 					}
 					addElement(retVal, (IElement) nextElement, theType);
@@ -105,7 +120,8 @@ public class ElementUtil {
 			retVal.add((T) next);
 		}
 		if (next instanceof ICompositeElement) {
-			retVal.addAll(((ICompositeElement) next).getAllPopulatedChildElementsOfType(theType));
+			ICompositeElement iCompositeElement = (ICompositeElement) next;
+			retVal.addAll(iCompositeElement.getAllPopulatedChildElementsOfType(theType));
 		}
 	}
 	

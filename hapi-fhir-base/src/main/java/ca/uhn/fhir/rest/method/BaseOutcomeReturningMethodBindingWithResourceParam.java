@@ -20,31 +20,30 @@ package ca.uhn.fhir.rest.method;
  * #L%
  */
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
-import org.apache.commons.io.IOUtils;
-import org.hl7.fhir.instance.model.IBaseResource;
-import org.hl7.fhir.instance.model.api.IBaseBinary;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IIdType;
 
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IResource;
+import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.client.BaseHttpClientInvocation;
 import ca.uhn.fhir.rest.param.ResourceParameter;
-import ca.uhn.fhir.rest.server.Constants;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 
 abstract class BaseOutcomeReturningMethodBindingWithResourceParam extends BaseOutcomeReturningMethodBinding {
-	private int myResourceParameterIndex;
-	private String myResourceName;
-	private boolean myBinary;
-	private Class<? extends IBaseResource> myResourceType;
 	private Integer myIdParamIndex;
+	private String myResourceName;
+	private int myResourceParameterIndex;
+	private Class<? extends IBaseResource> myResourceType;
+	private Class<? extends IIdType> myIdParamType;
 
+	@SuppressWarnings("unchecked")
 	public BaseOutcomeReturningMethodBindingWithResourceParam(Method theMethod, FhirContext theContext, Class<?> theMethodAnnotation, Object theProvider) {
 		super(theMethod, theContext, theMethodAnnotation, theProvider);
 
@@ -53,68 +52,47 @@ abstract class BaseOutcomeReturningMethodBindingWithResourceParam extends BaseOu
 		int index = 0;
 		for (IParameter next : getParameters()) {
 			if (next instanceof ResourceParameter) {
+				resourceParameter = (ResourceParameter) next;
+				if (resourceParameter.getMode() != ResourceParameter.Mode.RESOURCE) {
+					continue;
+				}
 				if (myResourceType != null) {
 					throw new ConfigurationException("Method " + theMethod.getName() + " on type " + theMethod.getDeclaringClass() + " has more than one @ResourceParam. Only one is allowed.");
 				}
-				
-				resourceParameter = (ResourceParameter) next;
-				Class<? extends IBaseResource> providerResourceType = resourceParameter.getResourceType();
-
-				if (theProvider instanceof IResourceProvider) {
-					providerResourceType = ((IResourceProvider) theProvider).getResourceType();
-				}
-
-				if (IBaseBinary.class.isAssignableFrom(providerResourceType)) {
-					myBinary = true;
-				}
 
 				myResourceType = resourceParameter.getResourceType();
-				if (Modifier.isAbstract(myResourceType.getModifiers())) {
-					myResourceType = providerResourceType;
-				}
-				
-				myResourceName = theContext.getResourceDefinition(providerResourceType).getName();
 
 				myResourceParameterIndex = index;
 			}
 			index++;
 		}
-		
+
+		if ((myResourceType == null || Modifier.isAbstract(myResourceType.getModifiers())) && (theProvider instanceof IResourceProvider)) {
+			myResourceType = ((IResourceProvider) theProvider).getResourceType();
+		}
+		if (myResourceType == null) {
+			throw new ConfigurationException("Unable to determine resource type for method: " + theMethod);
+		}
+
+		myResourceName = theContext.getResourceDefinition(myResourceType).getName();
 		myIdParamIndex = MethodUtil.findIdParameterIndex(theMethod);
-
-		if (resourceParameter == null) {
-			throw new ConfigurationException("Method " + theMethod.getName() + " in type " + theMethod.getDeclaringClass().getCanonicalName() + " does not have a parameter annotated with @" + ResourceParam.class.getSimpleName());
-		}
-
-	}
-
-	@Override
-	protected Class<? extends IBaseResource> requestContainsResourceType() {
-		return myResourceType;
-	}
-
-	@Override
-	protected IResource parseIncomingServerResource(Request theRequest) throws IOException {
-		if (myBinary) {
-			String ct = theRequest.getServletRequest().getHeader(Constants.HEADER_CONTENT_TYPE);
-			byte[] contents = IOUtils.toByteArray(theRequest.getServletRequest().getInputStream());
-			
-			IBaseBinary binary = (IBaseBinary) getContext().getResourceDefinition("Binary").newInstance();
-			binary.setContentType(ct);
-			binary.setContent(contents);
-			
-			return (IResource) binary;
-		} else {
-			return super.parseIncomingServerResource(theRequest);
-		}
-	}
-
-	@Override
-	protected void addParametersForServerRequest(Request theRequest, Object[] theParams) {
 		if (myIdParamIndex != null) {
-			theParams[myIdParamIndex] = theRequest.getId();
+			myIdParamType = (Class<? extends IIdType>) theMethod.getParameterTypes()[myIdParamIndex];
+		}
+		
+		if (resourceParameter == null) {
+			throw new ConfigurationException("Method " + theMethod.getName() + " in type " + theMethod.getDeclaringClass().getCanonicalName() + " does not have a resource parameter annotated with @" + ResourceParam.class.getSimpleName());
+		}
+
+	}
+
+	@Override
+	protected void addParametersForServerRequest(RequestDetails theRequest, Object[] theParams) {
+		if (myIdParamIndex != null) {
+			theParams[myIdParamIndex] = MethodUtil.convertIdToType(theRequest.getId(), myIdParamType);
 		}
 	}
+
 
 	@Override
 	public String getResourceName() {

@@ -1,8 +1,13 @@
 package ca.uhn.fhir.rest.server;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +38,7 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.hamcrest.core.StringContains;
 import org.hamcrest.core.StringEndsWith;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -85,7 +91,7 @@ import ca.uhn.fhir.util.PortUtil;
 public class RestfulServerMethodTest {
 
 	private static CloseableHttpClient ourClient;
-	private static FhirContext ourCtx;
+	private static final FhirContext ourCtx = FhirContext.forDstu1();
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(RestfulServerMethodTest.class);
 	private static int ourPort;
 	private static DummyDiagnosticReportResourceProvider ourReportProvider;
@@ -95,7 +101,7 @@ public class RestfulServerMethodTest {
 	@Test
 	public void testCreateBundleDoesntCreateDoubleEntries() {
 		
-		List<IResource> resources = new ArrayList<IResource>();
+		List<IBaseResource> resources = new ArrayList<IBaseResource>();
 		
 		Patient p = new Patient();
 		p.setId("Patient/1");
@@ -937,7 +943,7 @@ public class RestfulServerMethodTest {
 		assertEquals("BBB", patient.getName().get(0).getGiven().get(0).getValue());
 
 	}
-
+	
 	@Test
 	public void testValidate() throws Exception {
 
@@ -945,7 +951,7 @@ public class RestfulServerMethodTest {
 		patient.addName().addFamily("FOO");
 
 		HttpPost httpPost = new HttpPost("http://localhost:" + ourPort + "/Patient/_validate");
-		httpPost.setEntity(new StringEntity(new FhirContext().newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
+		httpPost.setEntity(new StringEntity(ourCtx.newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
 
 		HttpResponse status = ourClient.execute(httpPost);
 
@@ -956,7 +962,7 @@ public class RestfulServerMethodTest {
 		assertThat(responseContent, not(containsString("\n  ")));
 
 		assertEquals(200, status.getStatusLine().getStatusCode());
-		OperationOutcome oo = new FhirContext().newXmlParser().parseResource(OperationOutcome.class, responseContent);
+		OperationOutcome oo = ourCtx.newXmlParser().parseResource(OperationOutcome.class, responseContent);
 		assertEquals("it passed", oo.getIssueFirstRep().getDetails().getValue());
 
 		// Now should fail
@@ -965,7 +971,7 @@ public class RestfulServerMethodTest {
 		patient.addName().addFamily("BAR");
 
 		httpPost = new HttpPost("http://localhost:" + ourPort + "/Patient/_validate");
-		httpPost.setEntity(new StringEntity(new FhirContext().newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
+		httpPost.setEntity(new StringEntity(ourCtx.newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
 
 		status = ourClient.execute(httpPost);
 
@@ -975,7 +981,7 @@ public class RestfulServerMethodTest {
 		ourLog.info("Response was:\n{}", responseContent);
 
 		assertEquals(422, status.getStatusLine().getStatusCode());
-		oo = new FhirContext().newXmlParser().parseResource(OperationOutcome.class, responseContent);
+		oo = ourCtx.newXmlParser().parseResource(OperationOutcome.class, responseContent);
 		assertEquals("it failed", oo.getIssueFirstRep().getDetails().getValue());
 
 		// Should fail with outcome
@@ -984,7 +990,7 @@ public class RestfulServerMethodTest {
 		patient.addName().addFamily("BAZ");
 
 		httpPost = new HttpPost("http://localhost:" + ourPort + "/Patient/_validate");
-		httpPost.setEntity(new StringEntity(new FhirContext().newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
+		httpPost.setEntity(new StringEntity(ourCtx.newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
 
 		status = ourClient.execute(httpPost);
 
@@ -1004,7 +1010,7 @@ public class RestfulServerMethodTest {
 		patient.addName().addFamily("FOO");
 
 		HttpPost httpPost = new HttpPost("http://localhost:" + ourPort + "/Patient/_validate?_pretty=true");
-		httpPost.setEntity(new StringEntity(new FhirContext().newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
+		httpPost.setEntity(new StringEntity(ourCtx.newXmlParser().encodeResourceToString(patient), ContentType.create(Constants.CT_FHIR_XML, "UTF-8")));
 
 		HttpResponse status = ourClient.execute(httpPost);
 
@@ -1059,7 +1065,6 @@ public class RestfulServerMethodTest {
 	public static void beforeClass() throws Exception {
 		ourPort = PortUtil.findFreePort();
 		ourServer = new Server(ourPort);
-		ourCtx = new FhirContext(Patient.class);
 
 		DummyPatientResourceProvider patientProvider = new DummyPatientResourceProvider();
 		ourReportProvider = new DummyDiagnosticReportResourceProvider();
@@ -1150,7 +1155,7 @@ public class RestfulServerMethodTest {
 		public MethodOutcome deletePatient(@IdParam IdDt theId) {
 			MethodOutcome retVal = new MethodOutcome();
 			retVal.setOperationOutcome(new OperationOutcome());
-			retVal.getOperationOutcome().addIssue().setDetails(theId.getValue());
+			((OperationOutcome)retVal.getOperationOutcome()).addIssue().setDetails(theId.getValue());
 			return retVal;
 		}
 
@@ -1423,6 +1428,7 @@ public class RestfulServerMethodTest {
 		private Collection<IResourceProvider> myResourceProviders;
 
 		public DummyRestfulServer(IResourceProvider... theResourceProviders) {
+			super(ourCtx);
 			myResourceProviders = new ArrayList<IResourceProvider>(Arrays.asList(theResourceProviders));
 		}
 

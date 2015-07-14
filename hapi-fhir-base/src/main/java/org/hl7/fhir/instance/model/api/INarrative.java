@@ -20,10 +20,15 @@ package org.hl7.fhir.instance.model.api;
  * #L%
  */
 
-import org.hl7.fhir.instance.model.ICompositeType;
 
 public interface INarrative extends ICompositeType {
 
 	boolean isEmpty();
+
+	// TODO: use less broad exception type here
+	public void setDivAsString(String theString) throws Exception;
+
+	// TODO: use less broad exception type here
+	public String getDivAsString() throws Exception;
 
 }

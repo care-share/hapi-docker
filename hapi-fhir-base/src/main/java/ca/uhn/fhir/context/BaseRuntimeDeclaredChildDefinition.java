@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang3.text.WordUtils;
-import org.hl7.fhir.instance.model.IBase;
+import org.hl7.fhir.instance.model.api.IBase;
 
 import ca.uhn.fhir.model.api.annotation.Child;
 import ca.uhn.fhir.model.api.annotation.Description;
@@ -38,7 +38,6 @@ import ca.uhn.fhir.util.BeanUtils;
 
 public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChildDefinition {
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(BaseRuntimeDeclaredChildDefinition.class);
-	private Boolean ourUseMethodAccessors;
 	private final IAccessor myAccessor;
 	private final String myElementName;
 	private final Field myField;
@@ -47,6 +46,7 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 	private final int myMin;
 	private final IMutator myMutator;
 	private final String myShortDefinition;
+	private Boolean ourUseMethodAccessors;
 
 	BaseRuntimeDeclaredChildDefinition(Field theField, Child theChildAnnotation, Description theDescriptionAnnotation, String theElementName) throws ConfigurationException {
 		super();
@@ -107,12 +107,25 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 				}
 				final Method accessor = BeanUtils.findAccessor(declaringClass, targetReturnType, elementName);
 				if (accessor == null) {
-					throw new ConfigurationException("Could not find bean accessor/getter for property " + elementName + " on class " + declaringClass.getCanonicalName());
+					StringBuilder b = new StringBuilder();
+					b.append("Could not find bean accessor/getter for property ");
+					b.append(elementName);
+					b.append(" on class ");
+					b.append(declaringClass.getCanonicalName());
+					throw new ConfigurationException(b.toString());
 				}
 
 				final Method mutator = findMutator(declaringClass, targetReturnType, elementName);
 				if (mutator == null) {
-					throw new ConfigurationException("Could not find bean mutator/setter for property " + elementName + " on class " + declaringClass.getCanonicalName() + " (expected return type " + targetReturnType.getCanonicalName() + ")");
+					StringBuilder b = new StringBuilder();
+					b.append("Could not find bean mutator/setter for property ");
+					b.append(elementName);
+					b.append(" on class ");
+					b.append(declaringClass.getCanonicalName());
+					b.append(" (expected return type ");
+					b.append(targetReturnType.getCanonicalName());
+					b.append(")");
+					throw new ConfigurationException(b.toString());
 				}
 
 				if (List.class.isAssignableFrom(targetReturnType)) {
@@ -134,6 +147,7 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 		return myAccessor;
 	}
 
+	@Override
 	public String getElementName() {
 		return myElementName;
 	}
@@ -183,16 +197,53 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 		}
 	}
 
-	private final class FieldPlainMutator implements IMutator {
+	private final class FieldListAccessor implements IAccessor {
+		@SuppressWarnings("unchecked")
+		@Override
+		public List<IBase> getValues(Object theTarget) {
+			List<IBase> retVal;
+			try {
+				retVal = (List<IBase>) myField.get(theTarget);
+			} catch (IllegalArgumentException e) {
+				throw new ConfigurationException("Failed to get value", e);
+			} catch (IllegalAccessException e) {
+				throw new ConfigurationException("Failed to get value", e);
+			}
+			if (retVal == null) {
+				retVal = Collections.emptyList();
+			}
+			return retVal;
+		}
+	}
+
+	protected final class FieldListMutator implements IMutator {
 		@Override
 		public void addValue(Object theTarget, IBase theValue) {
+			addValue(theTarget, theValue, false);
+		}
+
+		private void addValue(Object theTarget, IBase theValue, boolean theClear) {
 			try {
-				myField.set(theTarget, theValue);
+				@SuppressWarnings("unchecked")
+				List<IBase> existingList = (List<IBase>) myField.get(theTarget);
+				if (existingList == null) {
+					existingList = new ArrayList<IBase>(2);
+					myField.set(theTarget, existingList);
+				}
+				if (theClear) {
+					existingList.clear();
+				}
+				existingList.add(theValue);
 			} catch (IllegalArgumentException e) {
 				throw new ConfigurationException("Failed to set value", e);
 			} catch (IllegalAccessException e) {
 				throw new ConfigurationException("Failed to set value", e);
 			}
+		}
+
+		@Override
+		public void setValue(Object theTarget, IBase theValue) {
+			addValue(theTarget, theValue, true);
 		}
 	}
 
@@ -214,45 +265,25 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 		}
 	}
 
-	private final class FieldListMutator implements IMutator {
+	protected final class FieldPlainMutator implements IMutator {
 		@Override
 		public void addValue(Object theTarget, IBase theValue) {
 			try {
-				@SuppressWarnings("unchecked")
-				List<IBase> existingList = (List<IBase>) myField.get(theTarget);
-				if (existingList == null) {
-					existingList = new ArrayList<IBase>(2);
-					myField.set(theTarget, existingList);
-				}
-				existingList.add(theValue);
+				myField.set(theTarget, theValue);
 			} catch (IllegalArgumentException e) {
 				throw new ConfigurationException("Failed to set value", e);
 			} catch (IllegalAccessException e) {
 				throw new ConfigurationException("Failed to set value", e);
 			}
 		}
-	}
 
-	private final class FieldListAccessor implements IAccessor {
-		@SuppressWarnings("unchecked")
 		@Override
-		public List<IBase> getValues(Object theTarget) {
-			List<IBase> retVal;
-			try {
-				retVal = (List<IBase>) myField.get(theTarget);
-			} catch (IllegalArgumentException e) {
-				throw new ConfigurationException("Failed to get value", e);
-			} catch (IllegalAccessException e) {
-				throw new ConfigurationException("Failed to get value", e);
-			}
-			if (retVal == null) {
-				retVal = Collections.emptyList();
-			}
-			return retVal;
+		public void setValue(Object theTarget, IBase theValue) {
+			addValue(theTarget, theValue);
 		}
 	}
 
-	private final static class ListAccessor implements IAccessor {
+	private static final class ListAccessor implements IAccessor {
 		private final Method myAccessorMethod;
 
 		private ListAccessor(Method theAccessor) {
@@ -281,8 +312,7 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 			myMutatorMethod = theMutator;
 		}
 
-		@Override
-		public void addValue(Object theTarget, IBase theValue) {
+		private void addValue(Object theTarget, boolean theClear, IBase theValue) {
 			List<IBase> existingList = myAccessor.getValues(theTarget);
 			if (existingList == null) {
 				existingList = new ArrayList<IBase>();
@@ -296,7 +326,20 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 					throw new ConfigurationException("Failed to get value", e);
 				}
 			}
+			if (theClear) {
+				existingList.clear();
+			}
 			existingList.add(theValue);
+		}
+
+		@Override
+		public void addValue(Object theTarget, IBase theValue) {
+			addValue(theTarget, false, theValue);
+		}
+
+		@Override
+		public void setValue(Object theTarget, IBase theValue) {
+			addValue(theTarget, true, theValue);
 		}
 	}
 
@@ -347,6 +390,11 @@ public abstract class BaseRuntimeDeclaredChildDefinition extends BaseRuntimeChil
 			} catch (InvocationTargetException e) {
 				throw new ConfigurationException("Failed to get value", e);
 			}
+		}
+
+		@Override
+		public void setValue(Object theTarget, IBase theValue) {
+			addValue(theTarget, theValue);
 		}
 	}
 

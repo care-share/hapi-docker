@@ -33,13 +33,12 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.message.BasicNameValuePair;
-import org.hl7.fhir.instance.model.IBaseResource;
 import org.hl7.fhir.instance.model.api.IBaseBinary;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.model.api.Bundle;
-import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.api.TagList;
 import ca.uhn.fhir.model.valueset.BundleTypeEnum;
 import ca.uhn.fhir.parser.DataFormatException;
@@ -49,7 +48,6 @@ import ca.uhn.fhir.rest.server.Constants;
 import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.IVersionSpecificBundleFactory;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
-import ca.uhn.fhir.validation.FhirValidator;
 
 /**
  * @author James Agnew
@@ -64,9 +62,10 @@ abstract class BaseHttpClientInvocationWithContents extends BaseHttpClientInvoca
 	private final FhirContext myContext;
 	private Map<String, List<String>> myIfNoneExistParams;
 	private String myIfNoneExistString;
+	private boolean myOmitResourceId = false;
 	private Map<String, List<String>> myParams;
 	private final IBaseResource myResource;
-	private final List<IResource> myResources;
+	private final List<? extends IBaseResource> myResources;
 	private final TagList myTagList;
 	private final String myUrlPath;
 
@@ -106,7 +105,7 @@ abstract class BaseHttpClientInvocationWithContents extends BaseHttpClientInvoca
 		myBundleType = null;
 	}
 
-	public BaseHttpClientInvocationWithContents(FhirContext theContext, List<IResource> theResources, BundleTypeEnum theBundleType) {
+	public BaseHttpClientInvocationWithContents(FhirContext theContext, List<? extends IBaseResource> theResources, BundleTypeEnum theBundleType) {
 		myContext = theContext;
 		myResource = null;
 		myTagList = null;
@@ -188,7 +187,7 @@ abstract class BaseHttpClientInvocationWithContents extends BaseHttpClientInvoca
 	}
 
 	@Override
-	public HttpRequestBase asHttpRequest(String theUrlBase, Map<String, List<String>> theExtraParams, EncodingEnum theEncoding) throws DataFormatException {
+	public HttpRequestBase asHttpRequest(String theUrlBase, Map<String, List<String>> theExtraParams, EncodingEnum theEncoding, Boolean thePrettyPrint) throws DataFormatException {
 		StringBuilder url = new StringBuilder();
 
 		if (myUrlPath == null) {
@@ -235,6 +234,12 @@ abstract class BaseHttpClientInvocationWithContents extends BaseHttpClientInvoca
 			encoding = EncodingEnum.XML;
 			parser = myContext.newXmlParser();
 		}
+		
+		if (thePrettyPrint != null) {
+			parser.setPrettyPrint(thePrettyPrint);
+		}
+		
+		parser.setOmitResourceId(myOmitResourceId);
 
 		AbstractHttpEntity entity;
 		if (myParams != null) {
@@ -304,6 +309,7 @@ abstract class BaseHttpClientInvocationWithContents extends BaseHttpClientInvoca
 	}
 
 	protected abstract HttpRequestBase createRequest(StringBuilder theUrl, AbstractHttpEntity theEntity);
+
 	private StringBuilder newHeaderBuilder(StringBuilder theUrlBase) {
 		StringBuilder b = new StringBuilder();
 		b.append(theUrlBase);
@@ -312,13 +318,16 @@ abstract class BaseHttpClientInvocationWithContents extends BaseHttpClientInvoca
 		}
 		return b;
 	}
-
 	public void setIfNoneExistParams(Map<String, List<String>> theIfNoneExist) {
 		myIfNoneExistParams = theIfNoneExist;
 	}
 
 	public void setIfNoneExistString(String theIfNoneExistString) {
 		myIfNoneExistString = theIfNoneExistString;
+	}
+
+	public void setOmitResourceId(boolean theOmitResourceId) {
+		myOmitResourceId = theOmitResourceId;
 	}
 
 }

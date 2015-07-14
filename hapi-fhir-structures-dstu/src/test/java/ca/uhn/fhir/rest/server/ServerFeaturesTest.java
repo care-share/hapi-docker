@@ -2,6 +2,7 @@ package ca.uhn.fhir.rest.server;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -25,6 +27,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.dstu.composite.HumanNameDt;
@@ -49,7 +52,8 @@ public class ServerFeaturesTest {
 	private static int ourPort;
 	private static Server ourServer;
 	private static RestfulServer servlet;
-
+	private static final FhirContext ourCtx = FhirContext.forDstu1();
+	
 	@Test
 	public void testPrettyPrint() throws Exception {
 		/*
@@ -88,7 +92,7 @@ public class ServerFeaturesTest {
 	}
 
 	@Test
-	public void testAcceptHeader() throws Exception {
+	public void testAcceptHeaderXml() throws Exception {
 		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient/1");
 		httpGet.addHeader("Accept", Constants.CT_FHIR_XML);
 		HttpResponse status = ourClient.execute(httpGet);
@@ -97,25 +101,34 @@ public class ServerFeaturesTest {
 
 		assertThat(responseContent, StringContains.containsString("<identifier><use"));
 
-		httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient/1");
+	}
+
+	@Test
+	public void testAcceptHeaderAtom() throws Exception {
+
+		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient/1");
 		httpGet.addHeader("Accept", Constants.CT_ATOM_XML);
-		status = ourClient.execute(httpGet);
-		responseContent = IOUtils.toString(status.getEntity().getContent());
+		CloseableHttpResponse status = ourClient.execute(httpGet);
+		String responseContent = IOUtils.toString(status.getEntity().getContent());
 		IOUtils.closeQuietly(status.getEntity().getContent());
 
 		assertThat(responseContent, StringContains.containsString("<identifier><use"));
 
-		httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient/1");
+	}
+
+	@Test
+	public void testAcceptHeaderJson() throws Exception {
+
+		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient/1");
 		httpGet.addHeader("Accept", Constants.CT_FHIR_JSON);
-		status = ourClient.execute(httpGet);
-		responseContent = IOUtils.toString(status.getEntity().getContent());
+		CloseableHttpResponse status = ourClient.execute(httpGet);
+		String responseContent = IOUtils.toString(status.getEntity().getContent());
 		IOUtils.closeQuietly(status.getEntity().getContent());
 
 		assertThat(responseContent, StringContains.containsString("\"identifier\":"));
 
 	}
 
-	
 
 
 	
@@ -136,11 +149,15 @@ public class ServerFeaturesTest {
 		IOUtils.closeQuietly(status.getEntity().getContent());
 
 		assertThat(responseContent, StringContains.containsString("<identifier><use"));
-
-		httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient/1");
+	}
+	
+	@Test
+	public void testAcceptHeaderWithMultipleJson() throws Exception {
+		
+		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient/1");
 		httpGet.addHeader("Accept", "text/plain, " + Constants.CT_FHIR_JSON);
-		status = ourClient.execute(httpGet);
-		responseContent = IOUtils.toString(status.getEntity().getContent());
+		CloseableHttpResponse status = ourClient.execute(httpGet);
+		String responseContent = IOUtils.toString(status.getEntity().getContent());
 		IOUtils.closeQuietly(status.getEntity().getContent());
 
 		assertThat(responseContent, StringContains.containsString("\"identifier\":"));
@@ -280,7 +297,7 @@ public class ServerFeaturesTest {
 		DummyPatientResourceProvider patientProvider = new DummyPatientResourceProvider();
 
 		ServletHandler proxyHandler = new ServletHandler();
-		servlet = new RestfulServer();
+		servlet = new RestfulServer(ourCtx);
 		servlet.setResourceProviders(patientProvider);
         servlet.setBundleInclusionRule(BundleInclusionRule.BASED_ON_RESOURCE_PRESENCE);
 		ServletHolder servletHolder = new ServletHolder(servlet);

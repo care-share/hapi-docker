@@ -20,79 +20,152 @@ package ca.uhn.fhir.validation;
  * #L%
  */
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.thymeleaf.util.Validate;
+
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.api.IResource;
-import ca.uhn.fhir.model.base.resource.BaseOperationOutcome;
-import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import ca.uhn.fhir.rest.server.EncodingEnum;
 
-class ValidationContext<T> {
+class ValidationContext<T> implements IValidationContext<T> {
 
 	private final IEncoder myEncoder;
 	private final FhirContext myFhirContext;
-	private BaseOperationOutcome myOperationOutcome;
+	private List<SingleValidationMessage> myMessages = new ArrayList<SingleValidationMessage>();
 	private final T myResource;
-	private String myXmlEncodedResource;
-private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(ValidationContext.class);
-	private ValidationContext(FhirContext theContext, T theResource, IEncoder theEncoder) {
+	private String myResourceAsString;
+	private final EncodingEnum myResourceAsStringEncoding;
+	private final String myResourceName;
+
+	private ValidationContext(FhirContext theContext, T theResource, String theResourceName, IEncoder theEncoder) {
 		myFhirContext = theContext;
 		myResource = theResource;
 		myEncoder = theEncoder;
+		myResourceName = theResourceName;
+		if (theEncoder != null) {
+			myResourceAsStringEncoding = theEncoder.getEncoding();
+		} else {
+			myResourceAsStringEncoding = null;
+		}
 	}
 
+	@Override
+	public void addValidationMessage(SingleValidationMessage theMessage) {
+		Validate.notNull(theMessage, "theMessage must not be null");
+		myMessages.add(theMessage);
+	}
+
+	@Override
 	public FhirContext getFhirContext() {
 		return myFhirContext;
 	}
 
-	public BaseOperationOutcome getOperationOutcome() {
-		if (myOperationOutcome == null) {
-			try {
-				myOperationOutcome = (BaseOperationOutcome) myFhirContext.getResourceDefinition("OperationOutcome").getImplementingClass().newInstance();
-			} catch (Exception e1) {
-				ourLog.error("Failed to instantiate OperationOutcome resource instance", e1);
-				throw new InternalErrorException("Failed to instantiate OperationOutcome resource instance", e1);
-			}
-		}
-		return myOperationOutcome;
-	}
-
+	@Override
 	public T getResource() {
 		return myResource;
 	}
 
-	public String getXmlEncodedResource() {
-		if (myXmlEncodedResource == null) {
-			myXmlEncodedResource = myEncoder.encode();
+	@Override
+	public String getResourceAsString() {
+		if (myResourceAsString == null) {
+			myResourceAsString = myEncoder.encode();
 		}
-		return myXmlEncodedResource;
+		return myResourceAsString;
 	}
 
-	public static ValidationContext<Bundle> forBundle(final FhirContext theContext, final Bundle theBundle) {
-		return new ValidationContext<Bundle>(theContext, theBundle, new IEncoder() {
+	@Override
+	public EncodingEnum getResourceAsStringEncoding() {
+		return myResourceAsStringEncoding;
+	}
+
+	@Override
+	public String getResourceName() {
+		return myResourceName;
+	}
+
+	@Override
+	public ValidationResult toResult() {
+		return new ValidationResult(myFhirContext, myMessages);
+	}
+
+	public static IValidationContext<Bundle> forBundle(final FhirContext theContext, final Bundle theBundle) {
+		String resourceName = "Bundle";
+		return new ValidationContext<Bundle>(theContext, theBundle, resourceName, new IEncoder() {
 			@Override
 			public String encode() {
 				return theContext.newXmlParser().encodeBundleToString(theBundle);
 			}
-		});
-	}
 
-	public static ValidationContext<IResource> forResource(final FhirContext theContext, final IResource theResource) {
-		return new ValidationContext<IResource>(theContext, theResource, new IEncoder() {
 			@Override
-			public String encode() {
-				return theContext.newXmlParser().encodeResourceToString(theResource);
+			public EncodingEnum getEncoding() {
+				return EncodingEnum.XML;
 			}
 		});
 	}
 
-	public static ValidationContext<IResource> newChild(ValidationContext<Bundle> theContext, IResource theResource) {
-		ValidationContext<IResource> retVal = forResource(theContext.getFhirContext(), theResource);
-		retVal.myOperationOutcome = theContext.getOperationOutcome();
-		return retVal;
+	public static <T extends IBaseResource> IValidationContext<T> forResource(final FhirContext theContext, final T theResource) {
+		String resourceName = theContext.getResourceDefinition(theResource).getName();
+		return new ValidationContext<T>(theContext, theResource, resourceName, new IEncoder() {
+			@Override
+			public String encode() {
+				return theContext.newXmlParser().encodeResourceToString(theResource);
+			}
+
+			@Override
+			public EncodingEnum getEncoding() {
+				return EncodingEnum.XML;
+			}
+		});
+	}
+
+	public static IValidationContext<IBaseResource> newChild(final IValidationContext<Bundle> theContext, final IResource theResource) {
+		return new IValidationContext<IBaseResource>() {
+
+			@Override
+			public void addValidationMessage(SingleValidationMessage theMessage) {
+				theContext.addValidationMessage(theMessage);
+			}
+
+			@Override
+			public FhirContext getFhirContext() {
+				return theContext.getFhirContext();
+			}
+
+			@Override
+			public IBaseResource getResource() {
+				return theResource;
+			}
+
+			@Override
+			public String getResourceAsString() {
+				return theContext.getFhirContext().newXmlParser().encodeResourceToString(theResource);
+			}
+
+			@Override
+			public EncodingEnum getResourceAsStringEncoding() {
+				return EncodingEnum.XML;
+			}
+
+			@Override
+			public String getResourceName() {
+				return theContext.getFhirContext().getResourceDefinition(theResource).getName();
+			}
+
+			@Override
+			public ValidationResult toResult() {
+				return theContext.toResult();
+			}
+		};
 	}
 
 	private interface IEncoder {
 		String encode();
+
+		EncodingEnum getEncoding();
 	}
 
 }

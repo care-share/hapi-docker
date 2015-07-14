@@ -1,7 +1,9 @@
 package ca.uhn.fhir.validation;
 
+import org.hl7.fhir.instance.model.api.IBaseResource;
+
 import ca.uhn.fhir.model.api.Bundle;
-import ca.uhn.fhir.model.api.IResource;
+
 
 /*
  * #%L
@@ -23,11 +25,13 @@ import ca.uhn.fhir.model.api.IResource;
  * #L%
  */
 
+/**
+ * Registers 
+ */
+public interface IValidator {
 
-interface IValidator {
+	void validateResource(IValidationContext<IBaseResource> theCtx);
 
-	void validateResource(ValidationContext<IResource> theCtx);
-
-	void validateBundle(ValidationContext<Bundle> theContext);
+	void validateBundle(IValidationContext<Bundle> theContext);
 
 }

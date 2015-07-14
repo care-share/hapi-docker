@@ -22,13 +22,19 @@ import org.junit.Test;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.dstu2.resource.Bundle;
 import ca.uhn.fhir.model.dstu2.resource.Bundle.Entry;
+import ca.uhn.fhir.model.dstu2.resource.Conformance;
+import ca.uhn.fhir.model.dstu2.resource.Conformance.RestInteraction;
+import ca.uhn.fhir.model.dstu2.resource.Conformance.RestOperation;
 import ca.uhn.fhir.model.dstu2.resource.OperationOutcome;
 import ca.uhn.fhir.model.dstu2.resource.Patient;
 import ca.uhn.fhir.model.dstu2.valueset.HTTPVerbEnum;
+import ca.uhn.fhir.model.dstu2.valueset.SystemRestfulInteractionEnum;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.model.primitive.InstantDt;
 import ca.uhn.fhir.rest.annotation.Transaction;
 import ca.uhn.fhir.rest.annotation.TransactionParam;
+import ca.uhn.fhir.rest.client.IGenericClient;
+import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.util.PortUtil;
 
 /**
@@ -42,7 +48,7 @@ public class TransactionWithBundleResourceParamTest {
 	}
 	
 	private static CloseableHttpClient ourClient;
-	private static FhirContext ourCtx = new FhirContext();
+	private static FhirContext ourCtx = FhirContext.forDstu2();
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(TransactionWithBundleResourceParamTest.class);
 	private static int ourPort;
 	private static boolean ourReturnOperationOutcome;
@@ -54,6 +60,21 @@ public class TransactionWithBundleResourceParamTest {
 		ourReturnOperationOutcome = false;
 	}
 
+	@Test
+	public void testConformance() {
+		ourCtx.getRestfulClientFactory().setSocketTimeout(500000);
+		IGenericClient client = ourCtx.newRestfulGenericClient("http://localhost:" + ourPort + "/");
+		Conformance rest = client.fetchConformance().ofType(Conformance.class).execute();
+		boolean supportsTransaction = false;
+		for (RestInteraction next : rest.getRest().get(0).getInteraction()) {
+			if (next.getCodeElement().getValueAsEnum() == SystemRestfulInteractionEnum.TRANSACTION) {
+				supportsTransaction = true;
+			}
+		}
+		
+		assertTrue(supportsTransaction);
+	}
+	
 	@Test
 	public void testTransactionWithXmlRequest() throws Exception {
 		Bundle b = new Bundle();
@@ -187,7 +208,7 @@ public class TransactionWithBundleResourceParamTest {
 
 		ourLog.info(responseContent);
 
-		Bundle bundle = new FhirContext().newXmlParser().parseResource(Bundle.class, responseContent);
+		Bundle bundle = ourCtx.newXmlParser().parseResource(Bundle.class, responseContent);
 		assertEquals(4, bundle.getEntry().size());
 
 		assertEquals(OperationOutcome.class, bundle.getEntry().get(0).getResource().getClass());
@@ -213,7 +234,7 @@ public class TransactionWithBundleResourceParamTest {
 		ourServer = new Server(ourPort);
 
 		DummyProvider patientProvider = new DummyProvider();
-		RestfulServer server = new RestfulServer();
+		RestfulServer server = new RestfulServer(ourCtx);
 		server.setProviders(patientProvider);
 
 		org.eclipse.jetty.servlet.ServletContextHandler proxyHandler = new org.eclipse.jetty.servlet.ServletContextHandler();

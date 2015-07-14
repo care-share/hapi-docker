@@ -25,9 +25,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.DateUtils;
-import org.hl7.fhir.instance.model.IBaseResource;
 import org.hl7.fhir.instance.model.api.IAnyResource;
-import org.hl7.fhir.instance.model.api.IMetaType;
+import org.hl7.fhir.instance.model.api.IBaseMetaType;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IIdType;
 
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
@@ -48,6 +49,7 @@ import ca.uhn.fhir.model.base.resource.BaseOperationOutcome;
 import ca.uhn.fhir.model.dstu.valueset.RestfulOperationTypeEnum;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.model.primitive.InstantDt;
+import ca.uhn.fhir.model.primitive.StringDt;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.annotation.ConditionalUrlParam;
 import ca.uhn.fhir.rest.annotation.Count;
@@ -64,17 +66,22 @@ import ca.uhn.fhir.rest.annotation.Since;
 import ca.uhn.fhir.rest.annotation.Sort;
 import ca.uhn.fhir.rest.annotation.TagListParam;
 import ca.uhn.fhir.rest.annotation.TransactionParam;
+import ca.uhn.fhir.rest.annotation.Validate;
 import ca.uhn.fhir.rest.annotation.VersionIdParam;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.ValidationModeEnum;
 import ca.uhn.fhir.rest.client.BaseHttpClientInvocation;
+import ca.uhn.fhir.rest.method.OperationParameter.IConverter;
 import ca.uhn.fhir.rest.param.CollectionBinder;
 import ca.uhn.fhir.rest.param.DateAndListParam;
 import ca.uhn.fhir.rest.param.NumberAndListParam;
 import ca.uhn.fhir.rest.param.QuantityAndListParam;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.ResourceParameter;
+import ca.uhn.fhir.rest.param.ResourceParameter.Mode;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
+import ca.uhn.fhir.rest.param.TransactionParameter;
 import ca.uhn.fhir.rest.server.Constants;
 import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.IDynamicSearchResourceProvider;
@@ -108,63 +115,136 @@ public class MethodUtil {
 
 	private static final String SCHEME = "scheme=\"";
 
-	static void addTagsToPostOrPut(IResource resource, BaseHttpClientInvocation retVal) {
-		TagList list = (TagList) resource.getResourceMetadata().get(ResourceMetadataKeyEnum.TAG_LIST);
-		if (list != null) {
-			for (Tag tag : list) {
-				if (StringUtils.isNotBlank(tag.getTerm())) {
-					retVal.addHeader(Constants.HEADER_CATEGORY, tag.toHeaderValue());
+	static void addTagsToPostOrPut(FhirContext theContext, IBaseResource resource, BaseHttpClientInvocation retVal) {
+		if (theContext.getVersion().getVersion().equals(FhirVersionEnum.DSTU1)) {
+			TagList list = (TagList) ((IResource)resource).getResourceMetadata().get(ResourceMetadataKeyEnum.TAG_LIST);
+			if (list != null) {
+				for (Tag tag : list) {
+					if (StringUtils.isNotBlank(tag.getTerm())) {
+						retVal.addHeader(Constants.HEADER_CATEGORY, tag.toHeaderValue());
+					}
 				}
 			}
 		}
+	}
+
+	
+	public static IIdType convertIdToType(IIdType value, Class<? extends IIdType> idParamType) {
+		if (value != null && !idParamType.isAssignableFrom(value.getClass())) {
+			try {
+				IIdType newValue = idParamType.newInstance();
+				newValue.setValue(value.getValue());
+				value = newValue;
+			} catch (InstantiationException e) {
+				throw new ConfigurationException("Failed to instantiate " + idParamType, e);
+			} catch (IllegalAccessException e) {
+				throw new ConfigurationException("Failed to instantiate " + idParamType, e);
+			}
+		}
+		return value;
 	}
 
 	public static HttpGetClientInvocation createConformanceInvocation() {
 		return new HttpGetClientInvocation("metadata");
 	}
 
-	public static HttpPostClientInvocation createCreateInvocation(IResource theResource, FhirContext theContext) {
+	public static HttpPostClientInvocation createCreateInvocation(IBaseResource theResource, FhirContext theContext) {
 		return createCreateInvocation(theResource, null, null, theContext);
 	}
 
-	public static HttpPostClientInvocation createCreateInvocation(IResource theResource, String theResourceBody, String theId, FhirContext theContext) {
+	public static HttpPostClientInvocation createCreateInvocation(IBaseResource theResource, String theResourceBody, String theId, FhirContext theContext) {
 		RuntimeResourceDefinition def = theContext.getResourceDefinition(theResource);
 		String resourceName = def.getName();
 
 		StringBuilder urlExtension = new StringBuilder();
 		urlExtension.append(resourceName);
 
-		if (StringUtils.isNotBlank(theId)) {
-			urlExtension.append('/');
-			urlExtension.append(theId);
+		boolean dstu1 = theContext.getVersion().getVersion().equals(FhirVersionEnum.DSTU1);
+		if (dstu1) {
+			/*
+			 * This was allowable at one point, but as of DSTU2 it isn't.
+			 */
+			if (StringUtils.isNotBlank(theId)) {
+				urlExtension.append('/');
+				urlExtension.append(theId);
+			}
 		}
-
+		
 		HttpPostClientInvocation retVal;
 		if (StringUtils.isBlank(theResourceBody)) {
 			retVal = new HttpPostClientInvocation(theContext, theResource, urlExtension.toString());
 		} else {
 			retVal = new HttpPostClientInvocation(theContext, theResourceBody, false, urlExtension.toString());
 		}
-		addTagsToPostOrPut(theResource, retVal);
+		addTagsToPostOrPut(theContext, theResource, retVal);
 
+		if (!dstu1) {
+			retVal.setOmitResourceId(true);
+		}
 		// addContentTypeHeaderBasedOnDetectedType(retVal, theResourceBody);
 
 		return retVal;
 	}
 
-	public static HttpPostClientInvocation createCreateInvocation(IResource theResource, String theResourceBody, String theId, FhirContext theContext, Map<String, List<String>> theIfNoneExistParams) {
+	public static HttpPostClientInvocation createCreateInvocation(IBaseResource theResource, String theResourceBody, String theId, FhirContext theContext, Map<String, List<String>> theIfNoneExistParams) {
 		HttpPostClientInvocation retVal = createCreateInvocation(theResource, theResourceBody, theId, theContext);
 		retVal.setIfNoneExistParams(theIfNoneExistParams);
 		return retVal;
 	}
 
-	public static HttpPostClientInvocation createCreateInvocation(IResource theResource, String theResourceBody, String theId, FhirContext theContext, String theIfNoneExistUrl) {
+	public static HttpPostClientInvocation createCreateInvocation(IBaseResource theResource, String theResourceBody, String theId, FhirContext theContext, String theIfNoneExistUrl) {
 		HttpPostClientInvocation retVal = createCreateInvocation(theResource, theResourceBody, theId, theContext);
 		retVal.setIfNoneExistString(theIfNoneExistUrl);
 		return retVal;
 	}
 
-	public static HttpPutClientInvocation createUpdateInvocation(IResource theResource, String theResourceBody, IdDt theId, FhirContext theContext) {
+	public static HttpPutClientInvocation createUpdateInvocation(FhirContext theContext, IBaseResource theResource, String theResourceBody, Map<String, List<String>> theMatchParams) {
+		StringBuilder b = new StringBuilder();
+
+		String resourceType = theContext.getResourceDefinition(theResource).getName();
+		b.append(resourceType);
+
+		boolean haveQuestionMark = false;
+		for (Entry<String, List<String>> nextEntry : theMatchParams.entrySet()) {
+			for (String nextValue : nextEntry.getValue()) {
+				b.append(haveQuestionMark ? '&' : '?');
+				haveQuestionMark = true;
+				try {
+					b.append(URLEncoder.encode(nextEntry.getKey(), "UTF-8"));
+					b.append('=');
+					b.append(URLEncoder.encode(nextValue, "UTF-8"));
+				} catch (UnsupportedEncodingException e) {
+					throw new ConfigurationException("UTF-8 not supported on this platform");
+				}
+			}
+		}
+
+		HttpPutClientInvocation retVal;
+		if (StringUtils.isBlank(theResourceBody)) {
+			retVal = new HttpPutClientInvocation(theContext, theResource, b.toString());
+		} else {
+			retVal = new HttpPutClientInvocation(theContext, theResourceBody, false, b.toString());
+		}
+
+		addTagsToPostOrPut(theContext, theResource, retVal);
+
+		return retVal;
+	}
+
+	public static HttpPutClientInvocation createUpdateInvocation(FhirContext theContext, IBaseResource theResource, String theResourceBody, String theMatchUrl) {
+		HttpPutClientInvocation retVal;
+		if (StringUtils.isBlank(theResourceBody)) {
+			retVal = new HttpPutClientInvocation(theContext, theResource, theMatchUrl);
+		} else {
+			retVal = new HttpPutClientInvocation(theContext, theResourceBody, false, theMatchUrl);
+		}
+
+		addTagsToPostOrPut(theContext, theResource, retVal);
+
+		return retVal;
+	}
+
+	public static HttpPutClientInvocation createUpdateInvocation(IBaseResource theResource, String theResourceBody, IIdType theId, FhirContext theContext) {
 		String resourceName = theContext.getResourceDefinition(theResource).getName();
 		StringBuilder urlBuilder = new StringBuilder();
 		urlBuilder.append(resourceName);
@@ -194,55 +274,8 @@ public class MethodUtil {
 			}
 		}
 
-		addTagsToPostOrPut(theResource, retVal);
+		addTagsToPostOrPut(theContext, theResource, retVal);
 		// addContentTypeHeaderBasedOnDetectedType(retVal, theResourceBody);
-
-		return retVal;
-	}
-
-	public static HttpPutClientInvocation createUpdateInvocation(FhirContext theContext, IResource theResource, String theResourceBody, Map<String, List<String>> theMatchParams) {
-		StringBuilder b = new StringBuilder();
-
-		String resourceType = theContext.getResourceDefinition(theResource).getName();
-		b.append(resourceType);
-
-		boolean haveQuestionMark = false;
-		for (Entry<String, List<String>> nextEntry : theMatchParams.entrySet()) {
-			for (String nextValue : nextEntry.getValue()) {
-				b.append(haveQuestionMark ? '&' : '?');
-				haveQuestionMark = true;
-				try {
-					b.append(URLEncoder.encode(nextEntry.getKey(), "UTF-8"));
-					b.append('=');
-					b.append(URLEncoder.encode(nextValue, "UTF-8"));
-				} catch (UnsupportedEncodingException e) {
-					throw new ConfigurationException("UTF-8 not supported on this platform");
-				}
-			}
-		}
-
-
-		HttpPutClientInvocation retVal;
-		if (StringUtils.isBlank(theResourceBody)) {
-			retVal = new HttpPutClientInvocation(theContext, theResource, b.toString());
-		} else {
-			retVal = new HttpPutClientInvocation(theContext, theResourceBody, false, b.toString());
-		}
-
-		addTagsToPostOrPut(theResource, retVal);
-
-		return retVal;
-	}
-
-	public static HttpPutClientInvocation createUpdateInvocation(FhirContext theContext, IResource theResource, String theResourceBody, String theMatchUrl) {
-		HttpPutClientInvocation retVal;
-		if (StringUtils.isBlank(theResourceBody)) {
-			retVal = new HttpPutClientInvocation(theContext, theResource, theMatchUrl);
-		} else {
-			retVal = new HttpPutClientInvocation(theContext, theResourceBody, false, theMatchUrl);
-		}
-
-		addTagsToPostOrPut(theResource, retVal);
 
 		return retVal;
 	}
@@ -283,6 +316,10 @@ public class MethodUtil {
 		}
 	}
 
+	public static Integer findConditionalOperationParameterIndex(Method theMethod) {
+		return MethodUtil.findParamAnnotationIndex(theMethod, ConditionalUrlParam.class);
+	}
+
 	public static Integer findIdParameterIndex(Method theMethod) {
 		return MethodUtil.findParamAnnotationIndex(theMethod, IdParam.class);
 	}
@@ -304,10 +341,6 @@ public class MethodUtil {
 
 	public static Integer findTagListParameterIndex(Method theMethod) {
 		return MethodUtil.findParamAnnotationIndex(theMethod, TagListParam.class);
-	}
-
-	public static Integer findConditionalOperationParameterIndex(Method theMethod) {
-		return MethodUtil.findParamAnnotationIndex(theMethod, ConditionalUrlParam.class);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -397,10 +430,17 @@ public class MethodUtil {
 
 						param = new IncludeParameter((IncludeParam) nextAnnotation, instantiableCollectionType, specType);
 					} else if (nextAnnotation instanceof ResourceParam) {
-						if (!IResource.class.isAssignableFrom(parameterType)) {
+						Mode mode;
+						if (IBaseResource.class.isAssignableFrom(parameterType)) {
+							mode = Mode.RESOURCE;
+						} else if (String.class.equals(parameterType)) {
+							mode = ResourceParameter.Mode.BODY;
+						} else if (EncodingEnum.class.equals(parameterType)) {
+							mode = Mode.ENCODING;
+						} else {
 							throw new ConfigurationException("Method '" + theMethod.getName() + "' is annotated with @" + ResourceParam.class.getSimpleName() + " but has a type that is not an implemtation of " + IResource.class.getCanonicalName());
 						}
-						param = new ResourceParameter((Class<? extends IResource>) parameterType);
+						param = new ResourceParameter((Class<? extends IResource>) parameterType, theProvider, mode);
 					} else if (nextAnnotation instanceof IdParam || nextAnnotation instanceof VersionIdParam) {
 						param = new NullParameter();
 					} else if (nextAnnotation instanceof ServerBase) {
@@ -412,12 +452,42 @@ public class MethodUtil {
 					} else if (nextAnnotation instanceof Sort) {
 						param = new SortParameter();
 					} else if (nextAnnotation instanceof TransactionParam) {
-						param = new TransactionParamBinder(theContext);
+						param = new TransactionParameter(theContext);
 					} else if (nextAnnotation instanceof ConditionalUrlParam) {
 						param = new ConditionalParamBinder(theRestfulOperationTypeEnum);
 					} else if (nextAnnotation instanceof OperationParam) {
 						Operation op = theMethod.getAnnotation(Operation.class);
-						param = new OperationParamBinder(op.name(), (OperationParam)nextAnnotation);
+						param = new OperationParameter(op.name(), ((OperationParam) nextAnnotation));
+					} else if (nextAnnotation instanceof Validate.Mode) {
+						if (parameterType.equals(ValidationModeEnum.class) == false) {
+							throw new ConfigurationException("Parameter annotated with @" + Validate.class.getSimpleName() + "." + Validate.Mode.class.getSimpleName() + " must be of type " + ValidationModeEnum.class.getName());
+						}
+						param = new OperationParameter(Constants.EXTOP_VALIDATE, Constants.EXTOP_VALIDATE_MODE, 0, 1).setConverter(new IConverter() {
+							@Override
+							public Object incomingServer(Object theObject) {
+								return ValidationModeEnum.valueOf(theObject.toString().toUpperCase());
+							}
+							
+							@Override
+							public Object outgoingClient(Object theObject) {
+								return new StringDt(((ValidationModeEnum)theObject).name().toLowerCase());
+							}
+						});
+					} else if (nextAnnotation instanceof Validate.Profile) {
+						if (parameterType.equals(String.class) == false) {
+							throw new ConfigurationException("Parameter annotated with @" + Validate.class.getSimpleName() + "." + Validate.Profile.class.getSimpleName() + " must be of type " + String.class.getName());
+						}
+						param = new OperationParameter(Constants.EXTOP_VALIDATE, Constants.EXTOP_VALIDATE_PROFILE, 0, 1).setConverter(new IConverter() {
+							@Override
+							public Object incomingServer(Object theObject) {
+								return theObject.toString();
+							}
+							
+							@Override
+							public Object outgoingClient(Object theObject) {
+								return new StringDt(theObject.toString());
+							}
+						});
 					} else {
 						continue;
 					}
@@ -439,7 +509,7 @@ public class MethodUtil {
 		return parameters;
 	}
 
-	public static void parseClientRequestResourceHeaders(IdDt theRequestedId, Map<String, List<String>> theHeaders, IBaseResource resource) {
+	public static void parseClientRequestResourceHeaders(IIdType theRequestedId, Map<String, List<String>> theHeaders, IBaseResource resource) {
 		List<String> lmHeaders = theHeaders.get(Constants.HEADER_LAST_MODIFIED_LOWERCASE);
 		if (lmHeaders != null && lmHeaders.size() > 0 && StringUtils.isNotBlank(lmHeaders.get(0))) {
 			String headerValue = lmHeaders.get(0);
@@ -447,10 +517,17 @@ public class MethodUtil {
 			try {
 				headerDateValue = DateUtils.parseDate(headerValue);
 				if (resource instanceof IResource) {
-					InstantDt lmValue = new InstantDt(headerDateValue);
-					((IResource) resource).getResourceMetadata().put(ResourceMetadataKeyEnum.UPDATED, lmValue);
+					IResource iResource = (IResource) resource;
+					InstantDt existing = ResourceMetadataKeyEnum.UPDATED.get(iResource);
+					if (existing == null || existing.isEmpty()) {
+						InstantDt lmValue = new InstantDt(headerDateValue);
+						iResource.getResourceMetadata().put(ResourceMetadataKeyEnum.UPDATED, lmValue);
+					}
 				} else if (resource instanceof IAnyResource) {
-					((IAnyResource) resource).getMeta().setLastUpdated(headerDateValue);
+					IAnyResource anyResource = (IAnyResource) resource;
+					if (anyResource.getMeta().getLastUpdated() == null) {
+						anyResource.getMeta().setLastUpdated(headerDateValue);
+					}
 				}
 			} catch (Exception e) {
 				ourLog.warn("Unable to parse date string '{}'. Error is: {}", headerValue, e.toString());
@@ -495,7 +572,7 @@ public class MethodUtil {
 			if (resource instanceof IResource) {
 				ResourceMetadataKeyEnum.TAG_LIST.put((IResource) resource, tagList);
 			} else if (resource instanceof IAnyResource) {
-				IMetaType meta = ((IAnyResource) resource).getMeta();
+				IBaseMetaType meta = ((IAnyResource) resource).getMeta();
 				for (Tag next : tagList) {
 					meta.addTag().setSystem(next.getScheme()).setCode(next.getTerm()).setDisplay(next.getLabel());
 				}
@@ -530,26 +607,26 @@ public class MethodUtil {
 	public static IQueryParameterAnd<?> parseQueryParams(RuntimeSearchParam theParamDef, String theUnqualifiedParamName, List<QualifiedParamList> theParameters) {
 		QueryParameterAndBinder binder = null;
 		switch (theParamDef.getParamType()) {
-			case COMPOSITE:
-				throw new UnsupportedOperationException();
-			case DATE:
-				binder = new QueryParameterAndBinder(DateAndListParam.class, Collections.<Class<? extends IQueryParameterType>>emptyList());
-				break;
-			case NUMBER:
-				binder = new QueryParameterAndBinder(NumberAndListParam.class, Collections.<Class<? extends IQueryParameterType>>emptyList());
-				break;
-			case QUANTITY:
-				binder = new QueryParameterAndBinder(QuantityAndListParam.class, Collections.<Class<? extends IQueryParameterType>>emptyList());
-				break;
-			case REFERENCE:
-				binder = new QueryParameterAndBinder(ReferenceAndListParam.class, Collections.<Class<? extends IQueryParameterType>>emptyList());
-				break;
-			case STRING:
-				binder = new QueryParameterAndBinder(StringAndListParam.class, Collections.<Class<? extends IQueryParameterType>>emptyList());
-				break;
-			case TOKEN:
-				binder = new QueryParameterAndBinder(TokenAndListParam.class, Collections.<Class<? extends IQueryParameterType>>emptyList());
-				break;
+		case COMPOSITE:
+			throw new UnsupportedOperationException();
+		case DATE:
+			binder = new QueryParameterAndBinder(DateAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
+			break;
+		case NUMBER:
+			binder = new QueryParameterAndBinder(NumberAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
+			break;
+		case QUANTITY:
+			binder = new QueryParameterAndBinder(QuantityAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
+			break;
+		case REFERENCE:
+			binder = new QueryParameterAndBinder(ReferenceAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
+			break;
+		case STRING:
+			binder = new QueryParameterAndBinder(StringAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
+			break;
+		case TOKEN:
+			binder = new QueryParameterAndBinder(TokenAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
+			break;
 		}
 
 		return binder.parse(theUnqualifiedParamName, theParameters);
@@ -668,9 +745,11 @@ public class MethodUtil {
 
 				if (reader != null) {
 					IParser parser = ct.newParser(theContext);
-					IResource outcome = parser.parseResource(reader);
+					IBaseResource outcome = parser.parseResource(reader);
 					if (outcome instanceof BaseOperationOutcome) {
 						retVal.setOperationOutcome((BaseOperationOutcome) outcome);
+					} else {
+						retVal.setResource(outcome);
 					}
 				}
 

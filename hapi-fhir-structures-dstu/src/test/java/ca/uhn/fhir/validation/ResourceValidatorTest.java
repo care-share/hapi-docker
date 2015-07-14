@@ -1,5 +1,17 @@
 package ca.uhn.fhir.validation;
 
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+
+import org.apache.commons.io.IOUtils;
+import org.hamcrest.core.StringContains;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.dstu.resource.OperationOutcome;
@@ -7,26 +19,9 @@ import ca.uhn.fhir.model.dstu.resource.Patient;
 import ca.uhn.fhir.model.dstu.valueset.ContactSystemEnum;
 import ca.uhn.fhir.model.primitive.DateTimeDt;
 
-import org.apache.commons.io.IOUtils;
-import org.hamcrest.core.StringContains;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
-
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 public class ResourceValidatorTest {
 
-	private static FhirContext ourCtx = new FhirContext();
+	private static FhirContext ourCtx = FhirContext.forDstu1();
 	private static Locale ourDefaultLocale;
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(ResourceValidatorTest.class);
 
@@ -46,9 +41,10 @@ public class ResourceValidatorTest {
 			val.validate(p);
 			fail();
 		} catch (ValidationFailureException e) {
-			ourLog.info(ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(e.getOperationOutcome()));
-			assertEquals(1, e.getOperationOutcome().getIssue().size());
-			assertThat(e.getOperationOutcome().getIssueFirstRep().getDetailsElement().getValue(), containsString("cvc-complex-type.2.4.a"));
+			OperationOutcome outcome = (OperationOutcome) e.getOperationOutcome();
+			ourLog.info(ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(outcome));
+			assertEquals(1, outcome.getIssue().size());
+			assertThat(outcome.getIssueFirstRep().getDetailsElement().getValue(), containsString("cvc-complex-type.2.4.a"));
 		}
 	}
 	
@@ -60,8 +56,7 @@ public class ResourceValidatorTest {
 		 */
 		ourDefaultLocale = Locale.getDefault();
 		
-		Locale[] available = Locale.getAvailableLocales();
-		Locale newLocale = available[(int)(Math.random() * available.length)];
+		Locale newLocale = Locale.GERMANY;
 		Locale.setDefault(newLocale);
 		
 		ourLog.info("Tests are running in locale: " + newLocale.getDisplayName());
@@ -89,10 +84,10 @@ public class ResourceValidatorTest {
 		assertEquals("2001-03-31", new SimpleDateFormat("yyyy-MM-dd").format(p.getBirthDate().getValue()));
 
 		ValidationResult result = ourCtx.newValidator().validateWithResult(p);
-		String resultString = ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(result.getOperationOutcome());
+		String resultString = ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(result.toOperationOutcome());
 		ourLog.info(resultString);
 
-		assertEquals(2, result.getOperationOutcome().getIssue().size());
+		assertEquals(2, ((OperationOutcome)result.toOperationOutcome()).getIssue().size());
 		assertThat(resultString, StringContains.containsString("cvc-datatype-valid.1.2.3"));
 	}
 
@@ -112,9 +107,10 @@ public class ResourceValidatorTest {
 			val.validate(b);
 			fail();
 		} catch (ValidationFailureException e) {
-			ourLog.info(ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(e.getOperationOutcome()));
-			assertEquals(1, e.getOperationOutcome().getIssue().size());
-			assertThat(e.getOperationOutcome().getIssueFirstRep().getDetailsElement().getValue(), containsString("Inv-2:"));
+			OperationOutcome outcome = (OperationOutcome) e.getOperationOutcome();
+			ourLog.info(ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(outcome));
+			assertEquals(1, outcome.getIssue().size());
+			assertThat(outcome.getIssueFirstRep().getDetailsElement().getValue(), containsString("Inv-2:"));
 		}
 	}
 
@@ -133,7 +129,7 @@ public class ResourceValidatorTest {
 		p.getTelecomFirstRep().setValue("123-4567");
 		validationResult = val.validateWithResult(p);
 		assertFalse(validationResult.isSuccessful());
-		OperationOutcome operationOutcome = (OperationOutcome) validationResult.getOperationOutcome();
+		OperationOutcome operationOutcome = (OperationOutcome) validationResult.toOperationOutcome();
 		ourLog.info(ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(operationOutcome));
 		assertEquals(1, operationOutcome.getIssue().size());
 		assertThat(operationOutcome.getIssueFirstRep().getDetails().getValue(), containsString("Inv-2:"));
@@ -151,7 +147,7 @@ public class ResourceValidatorTest {
 		FhirValidator val = createFhirValidator();
 
 		ValidationResult result = val.validateWithResult(b);
-		OperationOutcome operationOutcome = (OperationOutcome) result.getOperationOutcome();
+		OperationOutcome operationOutcome = (OperationOutcome) result.toOperationOutcome();
 		ourLog.info(ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(operationOutcome));
 		
 		
@@ -174,7 +170,7 @@ public class ResourceValidatorTest {
 		p.getTelecomFirstRep().setValue("123-4567");
 		validationResult = val.validateWithResult(b);
 		assertFalse(validationResult.isSuccessful());
-		OperationOutcome operationOutcome = (OperationOutcome) validationResult.getOperationOutcome();
+		OperationOutcome operationOutcome = (OperationOutcome) validationResult.toOperationOutcome();
 		ourLog.info(ourCtx.newXmlParser().setPrettyPrint(true).encodeResourceToString(operationOutcome));
 		assertEquals(1, operationOutcome.getIssue().size());
 		assertThat(operationOutcome.getIssueFirstRep().getDetails().getValue(), containsString("Inv-2:"));

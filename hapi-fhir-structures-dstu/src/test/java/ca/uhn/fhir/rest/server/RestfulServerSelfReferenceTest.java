@@ -62,7 +62,7 @@ public class RestfulServerSelfReferenceTest {
 		int port = PortUtil.findFreePort();
 		Server server = new Server(port);
 
-		RestfulServer restServer = new RestfulServer();
+		RestfulServer restServer = new RestfulServer(ourCtx);
 		restServer.setFhirContext(ourCtx);
 		restServer.setResourceProviders(new DummyPatientResourceProvider());
 
@@ -108,7 +108,7 @@ public class RestfulServerSelfReferenceTest {
 		DummyPatientResourceProvider patientProvider = new DummyPatientResourceProvider();
 
 		ServletHandler proxyHandler = new ServletHandler();
-		RestfulServer server = new RestfulServer();
+		RestfulServer server = new RestfulServer(ourCtx);
 		ServerProfileProvider profProvider = new ServerProfileProvider(server);
 		server.setFhirContext(ourCtx);
 		server.setResourceProviders(patientProvider, profProvider);
@@ -134,7 +134,7 @@ public class RestfulServerSelfReferenceTest {
 			Patient patient = (Patient) bundle.getEntries().get(0).getResource();
 			assertEquals("PatientOne", patient.getName().get(0).getGiven().get(0).getValue());
 
-			assertEquals(uri, bundle.getLinkSelf().getValue());
+			assertEquals(uri.replace(":hapitest:", "%3Ahapitest%3A"), bundle.getLinkSelf().getValue());
 			assertEquals(baseUri, bundle.getLinkBase().getValue());
 		} finally {
 			hServer.stop();

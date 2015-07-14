@@ -23,7 +23,7 @@ import org.hl7.fhir.instance.model.api.IBaseDatatype;
  */
 
 
-public interface IPrimitiveType<T> extends IBase, IBaseDatatype {
+public interface IPrimitiveType<T> extends IBaseDatatype {
 
 	void setValueAsString(String theValue) throws IllegalArgumentException;
 

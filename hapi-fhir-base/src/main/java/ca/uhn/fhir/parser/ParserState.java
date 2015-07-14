@@ -32,16 +32,18 @@ import javax.xml.stream.events.XMLEvent;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
-import org.hl7.fhir.instance.model.IBase;
-import org.hl7.fhir.instance.model.IBaseResource;
-import org.hl7.fhir.instance.model.ICompositeType;
-import org.hl7.fhir.instance.model.IPrimitiveType;
+import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBinary;
 import org.hl7.fhir.instance.model.api.IBaseElement;
 import org.hl7.fhir.instance.model.api.IBaseExtension;
 import org.hl7.fhir.instance.model.api.IBaseHasExtensions;
 import org.hl7.fhir.instance.model.api.IBaseHasModifierExtensions;
-import org.hl7.fhir.instance.model.api.IReference;
+import org.hl7.fhir.instance.model.api.IBaseReference;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IBaseXhtml;
+import org.hl7.fhir.instance.model.api.ICompositeType;
+import org.hl7.fhir.instance.model.api.IDomainResource;
+import org.hl7.fhir.instance.model.api.IPrimitiveType;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition.IMutator;
@@ -53,13 +55,13 @@ import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeChildDeclaredExtensionDefinition;
 import ca.uhn.fhir.context.RuntimePrimitiveDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimePrimitiveDatatypeNarrativeDefinition;
+import ca.uhn.fhir.context.RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition;
 import ca.uhn.fhir.context.RuntimeResourceBlockDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.model.api.BaseBundle;
 import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.api.BundleEntry;
 import ca.uhn.fhir.model.api.ExtensionDt;
-import ca.uhn.fhir.model.api.ICompositeDatatype;
 import ca.uhn.fhir.model.api.IElement;
 import ca.uhn.fhir.model.api.IFhirVersion;
 import ca.uhn.fhir.model.api.IIdentifiableElement;
@@ -87,10 +89,12 @@ class ParserState<T> {
 	private boolean myJsonMode;
 	private T myObject;
 	private BaseState myState;
+	private IParserErrorHandler myErrorHandler;
 
-	private ParserState(FhirContext theContext, boolean theJsonMode) {
+	private ParserState(FhirContext theContext, boolean theJsonMode, IParserErrorHandler theErrorHandler) {
 		myContext = theContext;
 		myJsonMode = theJsonMode;
+		myErrorHandler = theErrorHandler;
 	}
 
 	public void attributeValue(String theName, String theValue) throws DataFormatException {
@@ -101,8 +105,8 @@ class ParserState<T> {
 		myState.endingElement();
 	}
 
-	public void enteringNewElement(String theNamespaceURI, String theName) throws DataFormatException {
-		myState.enteringNewElement(theNamespaceURI, theName);
+	public void enteringNewElement(String theNamespaceUri, String theName) throws DataFormatException {
+		myState.enteringNewElement(theNamespaceUri, theName);
 	}
 
 	public void enteringNewElementExtension(StartElement theElem, String theUrlAttr, boolean theIsModifier) {
@@ -202,15 +206,15 @@ class ParserState<T> {
 	}
 
 	/**
-	 * Invoked after any new XML event is individually processed, containing a copy of the XML event. This is basically
-	 * intended for embedded XHTML content
+	 * Invoked after any new XML event is individually processed, containing a copy of the XML event. This is basically intended for embedded XHTML content
 	 */
 	public void xmlEvent(XMLEvent theNextEvent) {
 		myState.xmlEvent(theNextEvent);
 	}
 
-	public static ParserState<Bundle> getPreAtomInstance(FhirContext theContext, Class<? extends IBaseResource> theResourceType, boolean theJsonMode) throws DataFormatException {
-		ParserState<Bundle> retVal = new ParserState<Bundle>(theContext, theJsonMode);
+	static ParserState<Bundle> getPreAtomInstance(FhirContext theContext, Class<? extends IBaseResource> theResourceType, boolean theJsonMode, IParserErrorHandler theErrorHandler)
+			throws DataFormatException {
+		ParserState<Bundle> retVal = new ParserState<Bundle>(theContext, theJsonMode, theErrorHandler);
 		if (theContext.getVersion().getVersion() == FhirVersionEnum.DSTU1) {
 			retVal.push(retVal.new PreAtomState(theResourceType));
 		} else {
@@ -223,8 +227,9 @@ class ParserState<T> {
 	 * @param theResourceType
 	 *            May be null
 	 */
-	public static <T extends IBaseResource> ParserState<T> getPreResourceInstance(Class<T> theResourceType, FhirContext theContext, boolean theJsonMode) throws DataFormatException {
-		ParserState<T> retVal = new ParserState<T>(theContext, theJsonMode);
+	static <T extends IBaseResource> ParserState<T> getPreResourceInstance(Class<T> theResourceType, FhirContext theContext, boolean theJsonMode, IParserErrorHandler theErrorHandler)
+			throws DataFormatException {
+		ParserState<T> retVal = new ParserState<T>(theContext, theJsonMode, theErrorHandler);
 		if (theResourceType == null) {
 			if (theContext.getVersion().getVersion() != FhirVersionEnum.DSTU2_HL7ORG) {
 				retVal.push(retVal.new PreResourceStateHapi(theResourceType));
@@ -241,13 +246,13 @@ class ParserState<T> {
 		return retVal;
 	}
 
-	public static ParserState<TagList> getPreTagListInstance(FhirContext theContext, boolean theJsonMode) {
-		ParserState<TagList> retVal = new ParserState<TagList>(theContext, theJsonMode);
+	static ParserState<TagList> getPreTagListInstance(FhirContext theContext, boolean theJsonMode, IParserErrorHandler theErrorHandler) {
+		ParserState<TagList> retVal = new ParserState<TagList>(theContext, theJsonMode, theErrorHandler);
 		retVal.push(retVal.new PreTagListState());
 		return retVal;
 	}
 
-	public class AtomAuthorState extends BaseState {
+	private class AtomAuthorState extends BaseState {
 
 		private BaseBundle myInstance;
 
@@ -262,7 +267,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("name".equals(theLocalPart)) {
 				push(new AtomPrimitiveState(myInstance.getAuthorName()));
 			} else if ("uri".equals(theLocalPart)) {
@@ -302,8 +307,7 @@ class ParserState<T> {
 				myScheme = theValue;
 			} else if ("value".equals(theName)) {
 				/*
-				 * This handles XML parsing, which is odd for this quasi-resource type, since the tag has three values
-				 * instead of one like everything else.
+				 * This handles XML parsing, which is odd for this quasi-resource type, since the tag has three values instead of one like everything else.
 				 */
 				switch (myCatState) {
 				case STATE_LABEL:
@@ -336,7 +340,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theName) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theName) throws DataFormatException {
 			if (myCatState != STATE_NONE) {
 				throw new DataFormatException("Unexpected element in entry: " + theName);
 			}
@@ -351,7 +355,7 @@ class ParserState<T> {
 
 	}
 
-	public class AtomDeletedEntryByState extends BaseState {
+	private class AtomDeletedEntryByState extends BaseState {
 
 		private BundleEntry myEntry;
 
@@ -366,7 +370,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("name".equals(theLocalPart)) {
 				push(new AtomPrimitiveState(myEntry.getDeletedByName()));
 			} else if ("email".equals(theLocalPart)) {
@@ -378,7 +382,7 @@ class ParserState<T> {
 
 	}
 
-	public class AtomDeletedEntryState extends AtomEntryState {
+	private class AtomDeletedEntryState extends AtomEntryState {
 
 		public AtomDeletedEntryState(Bundle theInstance, Class<? extends IBaseResource> theResourceType) {
 			super(theInstance, theResourceType);
@@ -400,13 +404,13 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
-			if ("by".equals(theLocalPart) && verifyNamespace(XmlParser.TOMBSTONES_NS, theNamespaceURI)) {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			if ("by".equals(theLocalPart) && verifyNamespace(XmlParser.TOMBSTONES_NS, theNamespaceUri)) {
 				push(new AtomDeletedEntryByState(getEntry()));
 			} else if ("comment".equals(theLocalPart)) {
 				push(new AtomPrimitiveState(getEntry().getDeletedComment()));
 			} else {
-				super.enteringNewElement(theNamespaceURI, theLocalPart);
+				super.enteringNewElement(theNamespaceUri, theLocalPart);
 			}
 		}
 
@@ -435,7 +439,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			throw new DataFormatException("Unexpected nested element in atom tag: " + theLocalPart);
 		}
 
@@ -446,7 +450,7 @@ class ParserState<T> {
 
 	}
 
-	public class AtomEntryState extends BaseState {
+	private class AtomEntryState extends BaseState {
 
 		private boolean myDeleted;
 		private BundleEntry myEntry;
@@ -470,7 +474,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("title".equals(theLocalPart)) {
 				push(new AtomPrimitiveState(myEntry.getTitle()));
 			} else if ("id".equals(theLocalPart)) {
@@ -484,7 +488,7 @@ class ParserState<T> {
 			} else if ("author".equals(theLocalPart)) {
 				push(new AtomAuthorState(myEntry));
 			} else if ("content".equals(theLocalPart)) {
-				push(new PreResourceStateHapi(myEntry, myResourceType));
+				push(new PreResourceStateHapi(myEntry, myResourceType).setRequireResourceType(false));
 			} else if ("summary".equals(theLocalPart)) {
 				push(new XhtmlState(getPreResourceState(), myEntry.getSummary(), false));
 			} else if ("category".equals(theLocalPart)) {
@@ -606,7 +610,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			throw new DataFormatException("Found unexpected element content '" + theLocalPart + "' within <link>");
 		}
 
@@ -638,7 +642,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			throw new DataFormatException("Unexpected nested element in atom tag: " + theLocalPart);
 		}
 
@@ -677,8 +681,8 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
-			if ("entry".equals(theLocalPart) && verifyNamespace(XmlParser.ATOM_NS, theNamespaceURI)) {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			if ("entry".equals(theLocalPart) && verifyNamespace(XmlParser.ATOM_NS, theNamespaceUri)) {
 				push(new AtomEntryState(myInstance, myResourceType));
 			} else if (theLocalPart.equals("title")) {
 				push(new AtomPrimitiveState(myInstance.getTitle()));
@@ -686,7 +690,7 @@ class ParserState<T> {
 				push(new AtomPrimitiveState(myInstance.getBundleId()));
 			} else if ("link".equals(theLocalPart)) {
 				push(new AtomLinkState(myInstance));
-			} else if ("totalResults".equals(theLocalPart) && (verifyNamespace(XmlParser.OPENSEARCH_NS, theNamespaceURI) || verifyNamespace(Constants.OPENSEARCH_NS_OLDER, theNamespaceURI))) {
+			} else if ("totalResults".equals(theLocalPart) && (verifyNamespace(XmlParser.OPENSEARCH_NS, theNamespaceUri) || verifyNamespace(Constants.OPENSEARCH_NS_OLDER, theNamespaceUri))) {
 				push(new AtomPrimitiveState(myInstance.getTotalResults()));
 			} else if ("updated".equals(theLocalPart)) {
 				push(new AtomPrimitiveState(myInstance.getUpdated()));
@@ -694,11 +698,11 @@ class ParserState<T> {
 				push(new AtomAuthorState(myInstance));
 			} else if ("category".equals(theLocalPart)) {
 				push(new AtomCategoryState(myInstance.getCategories()));
-			} else if ("deleted-entry".equals(theLocalPart) && verifyNamespace(XmlParser.TOMBSTONES_NS, theNamespaceURI)) {
+			} else if ("deleted-entry".equals(theLocalPart) && verifyNamespace(XmlParser.TOMBSTONES_NS, theNamespaceUri)) {
 				push(new AtomDeletedEntryState(myInstance, myResourceType));
 			} else {
-				if (theNamespaceURI != null) {
-					throw new DataFormatException("Unexpected element: {" + theNamespaceURI + "}" + theLocalPart);
+				if (theNamespaceUri != null) {
+					throw new DataFormatException("Unexpected element: {" + theNamespaceUri + "}" + theLocalPart);
 				} else {
 					throw new DataFormatException("Unexpected element: " + theLocalPart);
 				}
@@ -790,18 +794,16 @@ class ParserState<T> {
 			myPreResourceState = thePreResourceState;
 		}
 
-		@SuppressWarnings("unused")
 		public void attributeValue(String theName, String theValue) throws DataFormatException {
-			// ignore by default
+			myErrorHandler.unknownAttribute(null, theName);
 		}
 
 		public void endingElement() throws DataFormatException {
 			// ignore by default
 		}
 
-		@SuppressWarnings("unused")
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
-			// ignore by default
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			myErrorHandler.unknownElement(null, theLocalPart);
 		}
 
 		/**
@@ -818,7 +820,7 @@ class ParserState<T> {
 			} else {
 				if (theIsModifier == false) {
 					if (getCurrentElement() instanceof IBaseHasExtensions) {
-						IBaseExtension<?> ext = ((IBaseHasExtensions) getCurrentElement()).addExtension();
+						IBaseExtension<?, ?> ext = ((IBaseHasExtensions) getCurrentElement()).addExtension();
 						ext.setUrl(theUrlAttr);
 						ParserState<T>.ExtensionState newState = new ExtensionState(myPreResourceState, ext);
 						push(newState);
@@ -827,7 +829,7 @@ class ParserState<T> {
 					}
 				} else {
 					if (getCurrentElement() instanceof IBaseHasModifierExtensions) {
-						IBaseExtension<?> ext = ((IBaseHasModifierExtensions) getCurrentElement()).addModifierExtension();
+						IBaseExtension<?, ?> ext = ((IBaseHasModifierExtensions) getCurrentElement()).addModifierExtension();
 						ext.setUrl(theUrlAttr);
 						ParserState<T>.ExtensionState newState = new ExtensionState(myPreResourceState, ext);
 						push(newState);
@@ -895,7 +897,7 @@ class ParserState<T> {
 				if (myInstance instanceof IIdentifiableElement) {
 					((IIdentifiableElement) myInstance).setElementSpecificId((theValue));
 				} else {
-					((IResource)myInstance).setId(new IdDt(theValue));
+					((IResource) myInstance).setId(new IdDt(theValue));
 				}
 			} else if ("contentType".equals(theName)) {
 				myInstance.setContentType(theValue);
@@ -925,7 +927,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if (myJsonMode && "contentType".equals(theLocalPart) && mySubState == 0) {
 				mySubState = SUBSTATE_CT;
 			} else if (myJsonMode && "content".equals(theLocalPart) && mySubState == 0) {
@@ -973,7 +975,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("type".equals(theLocalPart)) {
 				push(new PrimitiveState(getPreResourceState(), myEntry.getDeletedResourceType()));
 			} else if ("id".equals(theLocalPart)) {
@@ -993,7 +995,7 @@ class ParserState<T> {
 
 	}
 
-	public class BundleEntrySearchState extends BaseState {
+	private class BundleEntrySearchState extends BaseState {
 
 		private BundleEntry myEntry;
 
@@ -1008,7 +1010,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("mode".equals(theLocalPart)) {
 				push(new PrimitiveState(getPreResourceState(), myEntry.getSearchMode()));
 			} else if ("score".equals(theLocalPart)) {
@@ -1020,7 +1022,7 @@ class ParserState<T> {
 
 	}
 
-	public class BundleEntryState extends BaseState {
+	private class BundleEntryState extends BaseState {
 
 		private BundleEntry myEntry;
 		private Class<? extends IBaseResource> myResourceType;
@@ -1039,7 +1041,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("base".equals(theLocalPart)) {
 				push(new PrimitiveState(getPreResourceState(), myEntry.getLinkBase()));
 			} else if ("transaction".equals(theLocalPart)) {
@@ -1049,14 +1051,14 @@ class ParserState<T> {
 			} else if ("score".equals(theLocalPart)) {
 				push(new PrimitiveState(getPreResourceState(), myEntry.getScore()));
 			} else if ("resource".equals(theLocalPart)) {
-				push(new PreResourceStateHapi(myEntry, myResourceType));
+				push(new PreResourceStateHapi(myEntry, myResourceType).setRequireResourceType(false));
 			} else if ("deleted".equals(theLocalPart)) {
 				push(new BundleEntryDeletedState(getPreResourceState(), myEntry));
+			} else if ("link".equals(theLocalPart)) {
+				push(new BundleLinkState(myEntry));
 			} else {
 				throw new DataFormatException("Unexpected element in entry: " + theLocalPart);
 			}
-
-			// TODO: handle category
 		}
 
 		protected BundleEntry getEntry() {
@@ -1118,7 +1120,7 @@ class ParserState<T> {
 
 	}
 
-	public class BundleEntryTransactionState extends BaseState {
+	private class BundleEntryTransactionState extends BaseState {
 
 		private BundleEntry myEntry;
 
@@ -1133,7 +1135,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("method".equals(theLocalPart)) {
 				push(new PrimitiveState(getPreResourceState(), myEntry.getTransactionMethod()));
 			} else if ("url".equals(theLocalPart)) {
@@ -1208,7 +1210,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if (myInRelation || myInUrl) {
 				throw new DataFormatException("Unexpected element '" + theLocalPart + "' in element 'link'");
 			}
@@ -1240,7 +1242,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if ("id".equals(theLocalPart)) {
 				push(new PrimitiveState(null, myInstance.getId()));
 			} else if ("meta".equals(theLocalPart)) {
@@ -1261,7 +1263,7 @@ class ParserState<T> {
 				throw new DataFormatException("Unxpected element '" + theLocalPart + "' in element 'Bundle'");
 			}
 
-			// if ("entry".equals(theLocalPart) && verifyNamespace(XmlParser.ATOM_NS, theNamespaceURI)) {
+			// if ("entry".equals(theLocalPart) && verifyNamespace(XmlParser.ATOM_NS, theNamespaceUri)) {
 			// push(new AtomEntryState(myInstance, myResourceType));
 			// } else if (theLocalPart.equals("published")) {
 			// push(new AtomPrimitiveState(myInstance.getPublished()));
@@ -1272,7 +1274,7 @@ class ParserState<T> {
 			// } else if ("link".equals(theLocalPart)) {
 			// push(new AtomLinkState(myInstance));
 			// } else if ("totalResults".equals(theLocalPart) && (verifyNamespace(XmlParser.OPENSEARCH_NS,
-			// theNamespaceURI) || verifyNamespace(Constants.OPENSEARCH_NS_OLDER, theNamespaceURI))) {
+			// theNamespaceUri) || verifyNamespace(Constants.OPENSEARCH_NS_OLDER, theNamespaceUri))) {
 			// push(new AtomPrimitiveState(myInstance.getTotalResults()));
 			// } else if ("updated".equals(theLocalPart)) {
 			// push(new AtomPrimitiveState(myInstance.getUpdated()));
@@ -1281,11 +1283,11 @@ class ParserState<T> {
 			// } else if ("category".equals(theLocalPart)) {
 			// push(new AtomCategoryState(myInstance.getCategories()));
 			// } else if ("deleted-entry".equals(theLocalPart) && verifyNamespace(XmlParser.TOMBSTONES_NS,
-			// theNamespaceURI)) {
+			// theNamespaceUri)) {
 			// push(new AtomDeletedEntryState(myInstance, myResourceType));
 			// } else {
-			// if (theNamespaceURI != null) {
-			// throw new DataFormatException("Unexpected element: {" + theNamespaceURI + "}" + theLocalPart);
+			// if (theNamespaceUri != null) {
+			// throw new DataFormatException("Unexpected element: {" + theNamespaceUri + "}" + theLocalPart);
 			// } else {
 			// throw new DataFormatException("Unexpected element: " + theLocalPart);
 			// }
@@ -1313,10 +1315,20 @@ class ParserState<T> {
 				String resourceName = myContext.getResourceDefinition(nextResource).getName();
 				String bundleIdPart = nextResource.getId().getIdPart();
 				if (isNotBlank(bundleIdPart)) {
+					String baseUrl;
 					if (isNotBlank(entryBaseUrl)) {
-						nextResource.setId(new IdDt(entryBaseUrl, resourceName, bundleIdPart, version));
+						baseUrl = entryBaseUrl;
 					} else {
-						nextResource.setId(new IdDt(bundleBaseUrl, resourceName, bundleIdPart, version));
+						baseUrl = bundleBaseUrl;
+					}
+					if (!baseUrl.startsWith("cid:") && !baseUrl.startsWith("urn:")) {
+						nextResource.setId(new IdDt(baseUrl, resourceName, bundleIdPart, version));
+					} else {
+						if (baseUrl.endsWith(":")) {
+							nextResource.setId(new IdDt(baseUrl + bundleIdPart));
+						} else {
+							nextResource.setId(new IdDt(baseUrl + ':' + bundleIdPart));
+						}
 					}
 				}
 			}
@@ -1365,6 +1377,37 @@ class ParserState<T> {
 
 	}
 
+	private class ContainedResourcesStateHl7Org extends PreResourceState {
+
+		public ContainedResourcesStateHl7Org(PreResourceState thePreResourcesState) {
+			super(thePreResourcesState, FhirVersionEnum.DSTU2_HL7ORG);
+		}
+
+		@Override
+		public void endingElement() throws DataFormatException {
+			pop();
+		}
+
+		@Override
+		public void wereBack() {
+			IBaseResource res = getCurrentElement();
+			assert res != null;
+			if (res.getIdElement() == null || res.getIdElement().isEmpty()) {
+				ourLog.debug("Discarding contained resource with no ID!");
+			} else {
+				getPreResourceState().getContainedResources().put(res.getIdElement().getValue(), res);
+				if (!res.getIdElement().isLocal()) {
+					res.getIdElement().setValue('#' + res.getIdElement().getIdPart());
+				}
+			}
+
+			IBaseResource preResCurrentElement = getPreResourceState().getCurrentElement();
+			RuntimeResourceDefinition def = myContext.getResourceDefinition(preResCurrentElement);
+			def.getChildByName("contained").getMutator().addValue(preResCurrentElement, res);
+		}
+
+	}
+
 	private class DeclaredExtensionState extends BaseState {
 
 		private IBase myChildInstance;
@@ -1385,16 +1428,18 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			BaseRuntimeElementDefinition<?> target = myDefinition.getChildByName(theLocalPart);
 			if (target == null) {
-				throw new DataFormatException("Unknown extension element name: " + theLocalPart);
+				myErrorHandler.unknownElement(null, theLocalPart);
+				push(new SwallowChildrenWholeState(getPreResourceState()));
+				return;
 			}
 
 			switch (target.getChildType()) {
 			case COMPOSITE_DATATYPE: {
 				BaseRuntimeElementCompositeDefinition<?> compositeTarget = (BaseRuntimeElementCompositeDefinition<?>) target;
-				ICompositeDatatype newChildInstance = (ICompositeDatatype) compositeTarget.newInstance(myDefinition.getInstanceConstructorArguments());
+				ICompositeType newChildInstance = (ICompositeType) compositeTarget.newInstance(myDefinition.getInstanceConstructorArguments());
 				myDefinition.getMutator().addValue(myParentInstance, newChildInstance);
 				ElementCompositeState newState = new ElementCompositeState(myPreResourceState, compositeTarget, newChildInstance);
 				push(newState);
@@ -1449,8 +1494,8 @@ class ParserState<T> {
 
 	private BaseState createResourceReferenceState(ParserState<T>.PreResourceState thePreResourceState, IBase newChildInstance) {
 		BaseState newState;
-		if (newChildInstance instanceof IReference) {
-			newState = new ResourceReferenceStateHl7Org(thePreResourceState, (IReference) newChildInstance);
+		if (newChildInstance instanceof IBaseReference) {
+			newState = new ResourceReferenceStateHl7Org(thePreResourceState, (IBaseReference) newChildInstance);
 		} else {
 			newState = new ResourceReferenceStateHapi(thePreResourceState, (BaseResourceReferenceDt) newChildInstance);
 		}
@@ -1460,10 +1505,6 @@ class ParserState<T> {
 	private class ElementCompositeState extends BaseState {
 
 		private BaseRuntimeElementCompositeDefinition<?> myDefinition;
-		public BaseRuntimeElementCompositeDefinition<?> getDefinition() {
-			return myDefinition;
-		}
-
 		private IBase myInstance;
 
 		public ElementCompositeState(PreResourceState thePreResourceState, BaseRuntimeElementCompositeDefinition<?> theDef, IBase theInstance) {
@@ -1502,15 +1543,16 @@ class ParserState<T> {
 			try {
 				child = myDefinition.getChildByNameOrThrowDataFormatException(theChildName);
 			} catch (DataFormatException e) {
-				if (false) {// TODO: make this configurable
-					throw e;
-				}
-				ourLog.warn(e.getMessage());
+				/*
+				 * This means we've found an element that doesn't exist on the structure. If the error handler doesn't throw an exception, swallow the element silently along with any child elements
+				 */
+				myErrorHandler.unknownElement(null, theChildName);
 				push(new SwallowChildrenWholeState(getPreResourceState()));
 				return;
 			}
 			BaseRuntimeElementDefinition<?> target = child.getChildByName(theChildName);
 			if (target == null) {
+				// This is a bug with the structures and shouldn't happen..
 				throw new DataFormatException("Found unexpected element '" + theChildName + "' in parent element '" + myDefinition.getName() + "'. Valid names are: " + child.getValidChildNames());
 			}
 
@@ -1523,6 +1565,7 @@ class ParserState<T> {
 				push(newState);
 				return;
 			}
+			case ID_DATATYPE:
 			case PRIMITIVE_DATATYPE: {
 				RuntimePrimitiveDatatypeDefinition primitiveTarget = (RuntimePrimitiveDatatypeDefinition) target;
 				IPrimitiveType<?> newChildInstance;
@@ -1555,6 +1598,14 @@ class ParserState<T> {
 				push(state);
 				return;
 			}
+			case PRIMITIVE_XHTML_HL7ORG: {
+				RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition xhtmlTarget = (RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition) target;
+				IBaseXhtml newDt = xhtmlTarget.newInstance();
+				child.getMutator().addValue(myInstance, newDt);
+				XhtmlStateHl7Org state = new XhtmlStateHl7Org(getPreResourceState(), newDt);
+				push(state);
+				return;
+			}
 			case CONTAINED_RESOURCES: {
 				List<? extends IBase> values = child.getAccessor().getValues(myInstance);
 				Object newDt;
@@ -1565,6 +1616,11 @@ class ParserState<T> {
 					newDt = values.get(0);
 				}
 				ContainedResourcesStateHapi state = new ContainedResourcesStateHapi(getPreResourceState());
+				push(state);
+				return;
+			}
+			case CONTAINED_RESOURCE_LIST: {
+				ContainedResourcesStateHl7Org state = new ContainedResourcesStateHl7Org(getPreResourceState());
 				push(state);
 				return;
 			}
@@ -1608,32 +1664,44 @@ class ParserState<T> {
 
 	private class ExtensionState extends BaseState {
 
-		private IBaseExtension<?> myExtension;
+		private IBaseExtension<?, ?> myExtension;
 
-		public ExtensionState(PreResourceState thePreResourceState, IBaseExtension<?> theExtension) {
+		public ExtensionState(PreResourceState thePreResourceState, IBaseExtension<?, ?> theExtension) {
 			super(thePreResourceState);
 			myExtension = theExtension;
 		}
 
 		@Override
+		public void attributeValue(String theName, String theValue) throws DataFormatException {
+			if ("url".equals(theName)) {
+				// The URL attribute is handles in the XML loop as a special case since it is "url" instead
+				// of "value" like every single other place
+				return;
+			}
+			super.attributeValue(theName, theValue);
+		}
+
+		@Override
 		public void endingElement() throws DataFormatException {
 			if (myExtension.getValue() != null && myExtension.getExtension().size() > 0) {
-				throw new DataFormatException("Extension must not have both a value and other contained extensions");
+				throw new DataFormatException("Extension (URL='" + myExtension.getUrl() + "') must not have both a value and other contained extensions");
 			}
 			pop();
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			BaseRuntimeElementDefinition<?> target = myContext.getRuntimeChildUndeclaredExtensionDefinition().getChildByName(theLocalPart);
 			if (target == null) {
-				throw new DataFormatException("Unknown extension element name: " + theLocalPart);
+				myErrorHandler.unknownElement(null, theLocalPart);
+				push(new SwallowChildrenWholeState(getPreResourceState()));
+				return;
 			}
 
 			switch (target.getChildType()) {
 			case COMPOSITE_DATATYPE: {
 				BaseRuntimeElementCompositeDefinition<?> compositeTarget = (BaseRuntimeElementCompositeDefinition<?>) target;
-				ICompositeDatatype newChildInstance = (ICompositeDatatype) compositeTarget.newInstance();
+				ICompositeType newChildInstance = (ICompositeType) compositeTarget.newInstance();
 				myExtension.setValue(newChildInstance);
 				ElementCompositeState newState = new ElementCompositeState(getPreResourceState(), compositeTarget, newChildInstance);
 				push(newState);
@@ -1648,10 +1716,15 @@ class ParserState<T> {
 				return;
 			}
 			case RESOURCE_REF: {
-				BaseResourceReferenceDt newChildInstance = (BaseResourceReferenceDt) newResourceReferenceDt(getPreResourceState().myInstance);
+				ICompositeType newChildInstance = (ICompositeType) newResourceReferenceDt(getPreResourceState().myInstance);
 				myExtension.setValue(newChildInstance);
-				ResourceReferenceStateHapi newState = new ResourceReferenceStateHapi(getPreResourceState(), newChildInstance);
-				push(newState);
+				if (myContext.getVersion().getVersion().equals(FhirVersionEnum.DSTU2_HL7ORG)) {
+					ParserState<T>.ResourceReferenceStateHl7Org newState = new ResourceReferenceStateHl7Org(getPreResourceState(), (IBaseReference) newChildInstance);
+					push(newState);
+				} else {
+					ResourceReferenceStateHapi newState = new ResourceReferenceStateHapi(getPreResourceState(), (BaseResourceReferenceDt) newChildInstance);
+					push(newState);
+				}
 				return;
 			}
 			case PRIMITIVE_XHTML:
@@ -1660,17 +1733,19 @@ class ParserState<T> {
 			case UNDECL_EXT:
 			case EXTENSION_DECLARED:
 			case CONTAINED_RESOURCES:
+			case CONTAINED_RESOURCE_LIST:
+			case ID_DATATYPE:
+			case PRIMITIVE_XHTML_HL7ORG:
 				break;
 			}
 		}
 
 		@Override
-		protected IBaseExtension<?> getCurrentElement() {
+		protected IBaseExtension<?, ?> getCurrentElement() {
 			return myExtension;
 		}
 
 	}
-
 
 	private class SecurityLabelElementStateHapi extends ElementCompositeState {
 
@@ -1682,7 +1757,6 @@ class ParserState<T> {
 		public void endingElement() throws DataFormatException {
 			pop();
 		}
-
 
 	}
 
@@ -1700,11 +1774,11 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if (theLocalPart.equals("versionId")) {
 				push(new MetaVersionElementState(getPreResourceState(), myMap));
-//			} else if (theLocalPart.equals("profile")) {
-//				
+				// } else if (theLocalPart.equals("profile")) {
+				//
 			} else if (theLocalPart.equals("lastUpdated")) {
 				InstantDt updated = new InstantDt();
 				push(new PrimitiveState(getPreResourceState(), updated));
@@ -1738,7 +1812,9 @@ class ParserState<T> {
 				}
 				push(new TagState(tagList));
 			} else {
-				throw new DataFormatException("Unexpected element '" + theLocalPart + "' found in 'meta' element");
+				myErrorHandler.unknownElement(null, theLocalPart);
+				push(new SwallowChildrenWholeState(getPreResourceState()));
+				return;
 			}
 		}
 
@@ -1764,8 +1840,10 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
-			throw new DataFormatException("Unexpected child element '" + theLocalPart + "' in element 'meta'");
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			myErrorHandler.unknownElement(null, theLocalPart);
+			push(new SwallowChildrenWholeState(getPreResourceState()));
+			return;
 		}
 
 	}
@@ -1782,7 +1860,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if (!"feed".equals(theLocalPart)) {
 				throw new DataFormatException("Expecting outer element called 'feed', found: " + theLocalPart);
 			}
@@ -1806,7 +1884,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if (!"Bundle".equals(theLocalPart)) {
 				throw new DataFormatException("Expecting outer element called 'Bundle', found: " + theLocalPart);
 			}
@@ -1845,33 +1923,30 @@ class ParserState<T> {
 			if (myEntry == null && myMutator == null) {
 				myObject = (T) getCurrentElement();
 			}
-			
+
 			IResource nextResource = (IResource) getCurrentElement();
 			String version = ResourceMetadataKeyEnum.VERSION.get(nextResource);
 			String resourceName = myContext.getResourceDefinition(nextResource).getName();
 			String bundleIdPart = nextResource.getId().getIdPart();
 			if (isNotBlank(bundleIdPart)) {
-//				if (isNotBlank(entryBaseUrl)) {
-//					nextResource.setId(new IdDt(entryBaseUrl, resourceName, bundleIdPart, version));
-//				} else {
-					nextResource.setId(new IdDt(null, resourceName, bundleIdPart, version));
-//				}
+				// if (isNotBlank(entryBaseUrl)) {
+				// nextResource.setId(new IdDt(entryBaseUrl, resourceName, bundleIdPart, version));
+				// } else {
+				nextResource.setId(new IdDt(null, resourceName, bundleIdPart, version));
+				// }
 			}
-
 
 		}
 
-		
-
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
-			super.enteringNewElement(theNamespaceURI, theLocalPart);
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			super.enteringNewElement(theNamespaceUri, theLocalPart);
 			if (myEntry != null) {
 				myEntry.setResource((IResource) getCurrentElement());
 			}
-				if (myMutator != null) {
-					myMutator.addValue(myTarget, getCurrentElement());
-				}
+			if (myMutator != null) {
+				myMutator.addValue(myTarget, getCurrentElement());
+			}
 		}
 
 	}
@@ -1898,11 +1973,24 @@ class ParserState<T> {
 			if (myTarget == null) {
 				myObject = (T) getCurrentElement();
 			}
+
+			if (getCurrentElement() instanceof IDomainResource) {
+				IDomainResource elem = (IDomainResource) getCurrentElement();
+				String resourceName = myContext.getResourceDefinition(elem).getName();
+				String versionId = elem.getMeta().getVersionId();
+				if (StringUtils.isBlank(elem.getIdElement().getIdPart())) {
+					// Resource has no ID
+				} else if (StringUtils.isNotBlank(versionId)) {
+					elem.getIdElement().setValue(resourceName + "/" + elem.getIdElement().getIdPart() + "/_history/" + versionId);
+				} else {
+					elem.getIdElement().setValue(resourceName + "/" + elem.getIdElement().getIdPart());
+				}
+			}
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
-			super.enteringNewElement(theNamespaceURI, theLocalPart);
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			super.enteringNewElement(theNamespaceUri, theLocalPart);
 			if (myMutator != null) {
 				myMutator.addValue(myTarget, getCurrentElement());
 			}
@@ -1916,6 +2004,12 @@ class ParserState<T> {
 		private IBaseResource myInstance;
 		private FhirVersionEnum myParentVersion;
 		private Class<? extends IBaseResource> myResourceType;
+		private boolean myRequireResourceType = true;
+
+		public ParserState<T>.PreResourceState setRequireResourceType(boolean theRequireResourceType) {
+			myRequireResourceType = theRequireResourceType;
+			return this;
+		}
 
 		public PreResourceState(Class<? extends IBaseResource> theResourceType) {
 			super(null);
@@ -1939,7 +2033,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			BaseRuntimeElementDefinition<?> definition;
 			if (myResourceType == null) {
 				definition = myContext.getResourceDefinition(myParentVersion, theLocalPart);
@@ -1949,6 +2043,9 @@ class ParserState<T> {
 			} else {
 				definition = myContext.getResourceDefinition(myResourceType);
 				if (!StringUtils.equals(theLocalPart, definition.getName())) {
+					if (myRequireResourceType) {
+						throw new DataFormatException(myContext.getLocalizer().getMessage(ParserState.class, "wrongResourceTypeFound", definition.getName(), theLocalPart));
+					}
 					definition = myContext.getResourceDefinition(theLocalPart);
 					if (!(definition instanceof RuntimeResourceDefinition)) {
 						throw new DataFormatException("Element '" + theLocalPart + "' is not a resource, expected a resource at this position");
@@ -1994,7 +2091,7 @@ class ParserState<T> {
 		@Override
 		public void wereBack() {
 			final boolean bundle = "Bundle".equals(myContext.getResourceDefinition(myInstance).getName());
-			
+
 			FhirTerser terser = myContext.newTerser();
 			terser.visit(myInstance, new IModelVisitor() {
 
@@ -2013,11 +2110,25 @@ class ParserState<T> {
 								}
 							}
 						}
+					} else if (theElement instanceof IBaseReference) {
+						IBaseReference nextRef = (IBaseReference) theElement;
+						String ref = nextRef.getReferenceElement().getValue();
+						if (isNotBlank(ref)) {
+							if (ref.startsWith("#")) {
+								IBaseResource target = myContainedResources.get(ref.substring(1));
+								if (target != null) {
+									nextRef.setResource(target);
+								} else {
+									ourLog.warn("Resource contains unknown local ref: " + ref);
+								}
+							}
+						}
 					}
 				}
 
 				@Override
-				public void acceptUndeclaredExtension(ISupportsUndeclaredExtensions theContainingElement, List<String> thePathToElement, BaseRuntimeChildDefinition theChildDefinition, BaseRuntimeElementDefinition<?> theDefinition, ExtensionDt theNextExt) {
+				public void acceptUndeclaredExtension(ISupportsUndeclaredExtensions theContainingElement, List<String> thePathToElement, BaseRuntimeChildDefinition theChildDefinition,
+						BaseRuntimeElementDefinition<?> theDefinition, ExtensionDt theNextExt) {
 					acceptElement(theNextExt.getValue(), null, null, null);
 				}
 			});
@@ -2050,7 +2161,7 @@ class ParserState<T> {
 				}
 
 			}
-			
+
 		}
 
 	}
@@ -2070,7 +2181,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if (!TagList.ELEMENT_NAME_LC.equals(theLocalPart.toLowerCase())) {
 				throw new DataFormatException("resourceType does not appear to be 'TagList', found: " + theLocalPart);
 			}
@@ -2114,8 +2225,12 @@ class ParserState<T> {
 				} else if (myInstance instanceof IBaseElement) {
 					((IBaseElement) myInstance).setId(theValue);
 				} else if (myInstance instanceof IBaseResource) {
-					new IdDt(theValue).applyTo((org.hl7.fhir.instance.model.IBaseResource) myInstance);
+					new IdDt(theValue).applyTo((org.hl7.fhir.instance.model.api.IBaseResource) myInstance);
+				} else {
+					myErrorHandler.unknownAttribute(null, theName);
 				}
+			} else {
+				myErrorHandler.unknownAttribute(null, theName);
 			}
 		}
 
@@ -2136,11 +2251,8 @@ class ParserState<T> {
 		// }
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
-			if (false) {// TODO: make this configurable
-				throw new Error("Element " + theLocalPart + " in primitive!"); // TODO:
-			}
-			ourLog.warn("Ignoring element {} in primitive tag", theLocalPart);
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			myErrorHandler.unknownElement(null, theLocalPart);
 			push(new SwallowChildrenWholeState(getPreResourceState()));
 			return;
 		}
@@ -2154,10 +2266,10 @@ class ParserState<T> {
 
 	private class ResourceReferenceStateHl7Org extends BaseState {
 
-		private IReference myInstance;
+		private IBaseReference myInstance;
 		private ResourceReferenceSubState mySubState;
 
-		public ResourceReferenceStateHl7Org(PreResourceState thePreResourceState, IReference theInstance) {
+		public ResourceReferenceStateHl7Org(PreResourceState thePreResourceState, IBaseReference theInstance) {
 			super(thePreResourceState);
 			myInstance = theInstance;
 			mySubState = ResourceReferenceSubState.INITIAL;
@@ -2194,7 +2306,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			switch (mySubState) {
 			case INITIAL:
 				if ("display".equals(theLocalPart)) {
@@ -2215,7 +2327,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		protected IReference getCurrentElement() {
+		protected IBaseReference getCurrentElement() {
 			return myInstance;
 		}
 
@@ -2263,7 +2375,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			switch (mySubState) {
 			case INITIAL:
 				if ("display".equals(theLocalPart)) {
@@ -2340,7 +2452,12 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void attributeValue(String theName, String theValue) throws DataFormatException {
+			// ignore
+		}
+
+		@Override
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			myDepth++;
 		}
 
@@ -2371,7 +2488,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			if (TagList.ATTR_CATEGORY.equals(theLocalPart)) {
 				push(new TagState(myTagList));
 			} else {
@@ -2435,7 +2552,7 @@ class ParserState<T> {
 		}
 
 		@Override
-		public void enteringNewElement(String theNamespaceURI, String theLocalPart) throws DataFormatException {
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
 			/*
 			 * We allow for both the DSTU1 and DSTU2 names here
 			 */
@@ -2448,6 +2565,25 @@ class ParserState<T> {
 			} else {
 				throw new DataFormatException("Unexpected element: " + theLocalPart);
 			}
+		}
+
+	}
+
+	private class XhtmlStateHl7Org extends XhtmlState {
+		private IBaseXhtml myHl7OrgDatatype;
+
+		private XhtmlStateHl7Org(PreResourceState thePreResourceState, IBaseXhtml theHl7OrgDatatype) {
+			super(thePreResourceState, new XhtmlDt(), true);
+			myHl7OrgDatatype = theHl7OrgDatatype;
+		}
+
+		@Override
+		public void doPop() {
+			// TODO: this is not very efficient
+			String value = getDt().getValueAsString();
+			myHl7OrgDatatype.setValueAsString(value);
+
+			super.doPop();
 		}
 
 	}
@@ -2465,19 +2601,33 @@ class ParserState<T> {
 			myIncludeOuterEvent = theIncludeOuterEvent;
 		}
 
+		public XhtmlDt getDt() {
+			return myDt;
+		}
+
+		@Override
+		public void enteringNewElement(String theNamespaceUri, String theLocalPart) throws DataFormatException {
+			// IGNORE - don't handle this as an error, we process these as XML events
+		}
+
 		@Override
 		public void attributeValue(String theName, String theValue) throws DataFormatException {
 			if (myJsonMode) {
 				myDt.setValueAsString(theValue);
 				return;
+			} else {
+				// IGNORE - don't handle this as an error, we process these as XML events
 			}
-			super.attributeValue(theName, theValue);
+		}
+
+		protected void doPop() {
+			pop();
 		}
 
 		@Override
 		public void endingElement() throws DataFormatException {
 			if (myJsonMode) {
-				pop();
+				doPop();
 				return;
 			}
 			super.endingElement();
@@ -2505,7 +2655,7 @@ class ParserState<T> {
 			if (theEvent.isEndElement()) {
 				if (myDepth == 0) {
 					myDt.setValue(myEvents);
-					pop();
+					doPop();
 				}
 			}
 		}

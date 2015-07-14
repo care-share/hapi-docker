@@ -52,6 +52,8 @@ import ca.uhn.fhir.model.dstu.resource.Conformance.RestQuery;
 import ca.uhn.fhir.model.dstu.resource.Conformance.RestResource;
 import ca.uhn.fhir.model.dstu.resource.Conformance.RestResourceSearchParam;
 import ca.uhn.fhir.model.dstu.valueset.SearchParamTypeEnum;
+import ca.uhn.fhir.model.dstu2.valueset.ResourceTypeEnum;
+import ca.uhn.fhir.model.primitive.BoundCodeDt;
 import ca.uhn.fhir.model.primitive.DateTimeDt;
 import ca.uhn.fhir.model.primitive.DecimalDt;
 import ca.uhn.fhir.model.primitive.IdDt;
@@ -333,6 +335,7 @@ public class Controller {
 		RuntimeResourceDefinition def = getContext(theRequest).getResourceDefinition(theRequest.getResource());
 
 		TreeSet<String> includes = new TreeSet<String>();
+		TreeSet<String> revIncludes = new TreeSet<String>();
 		TreeSet<String> sortParams = new TreeSet<String>();
 		List<RestQuery> queries = new ArrayList<Conformance.RestQuery>();
 		boolean haveSearchParams = false;
@@ -341,7 +344,7 @@ public class Controller {
 		switch (theRequest.getFhirVersion(myConfig)) {
 		case DEV:
 		case DSTU2:
-			haveSearchParams = extractSearchParamsDev(conformance, resourceName, includes, sortParams, queries, haveSearchParams, queryIncludes);
+			haveSearchParams = extractSearchParamsDev(conformance, resourceName, includes, revIncludes, sortParams, queries, haveSearchParams, queryIncludes);
 			break;
 		case DSTU1:
 			haveSearchParams = extractSearchParamsDstu1(conformance, resourceName, includes, sortParams, queries, haveSearchParams, queryIncludes);
@@ -351,6 +354,7 @@ public class Controller {
 		}
 
 		theModel.put("includes", includes);
+		theModel.put("revincludes", revIncludes);
 		theModel.put("queries", queries);
 		theModel.put("haveSearchParams", haveSearchParams);
 		theModel.put("queryIncludes", queryIncludes);
@@ -432,6 +436,18 @@ public class Controller {
 			for (String next : incValues) {
 				if (isNotBlank(next)) {
 					query.include(new Include(next));
+					clientCodeJsonWriter.write(next);
+				}
+			}
+		}
+		clientCodeJsonWriter.writeEnd();
+
+		clientCodeJsonWriter.writeStartArray("revincludes");
+		String[] revIncValues = theReq.getParameterValues(Constants.PARAM_REVINCLUDE);
+		if (revIncValues != null) {
+			for (String next : revIncValues) {
+				if (isNotBlank(next)) {
+					query.revInclude(new Include(next));
 					clientCodeJsonWriter.write(next);
 				}
 			}
@@ -581,6 +597,7 @@ public class Controller {
 
 		CaptureInterceptor interceptor = new CaptureInterceptor();
 		GenericClient client = theRequest.newClient(theReq, getContext(theRequest), myConfig, interceptor);
+		client.setPrettyPrint(true);
 
 		Class<? extends IResource> type = null; // def.getImplementingClass();
 		if ("history-type".equals(theMethod)) {
@@ -600,8 +617,10 @@ public class Controller {
 		try {
 			if (body.startsWith("{")) {
 				resource = getContext(theRequest).newJsonParser().parseResource(type, body);
+				client.setEncoding(EncodingEnum.JSON);
 			} else if (body.startsWith("<")) {
 				resource = getContext(theRequest).newXmlParser().parseResource(type, body);
+				client.setEncoding(EncodingEnum.XML);
 			} else {
 				theModel.put("errorMsg", "Message body does not appear to be a valid FHIR resource instance document. Body should start with '<' (for XML encoding) or '{' (for JSON encoding).");
 				return;
@@ -621,7 +640,7 @@ public class Controller {
 		try {
 			if (validate) {
 				outcomeDescription = "Validate Resource";
-				client.validate(resource);
+				client.validate().resource(resource).prettyPrint().execute();
 			} else {
 				String id = theReq.getParameter("resource-create-id");
 				if ("update".equals(theMethod)) {
@@ -699,7 +718,7 @@ public class Controller {
 
 	}
 
-	private boolean extractSearchParamsDev(IResource theConformance, String resourceName, TreeSet<String> includes, TreeSet<String> sortParams, List<RestQuery> queries, boolean haveSearchParams,
+	private boolean extractSearchParamsDev(IResource theConformance, String resourceName, TreeSet<String> includes, TreeSet<String> theRevIncludes, TreeSet<String> sortParams, List<RestQuery> queries, boolean haveSearchParams,
 			List<List<String>> queryIncludes) {
 		ca.uhn.fhir.model.dstu2.resource.Conformance conformance = (ca.uhn.fhir.model.dstu2.resource.Conformance) theConformance;
 		for (ca.uhn.fhir.model.dstu2.resource.Conformance.Rest nextRest : conformance.getRest()) {
@@ -717,6 +736,18 @@ public class Controller {
 					}
 					if (nextRes.getSearchParam().size() > 0) {
 						haveSearchParams = true;
+					}
+				} else {
+					// It's a different resource from the one we're searching, so
+					// scan for revinclude candidates
+					for (ca.uhn.fhir.model.dstu2.resource.Conformance.RestResourceSearchParam next : nextRes.getSearchParam()) {
+						if (next.getTypeElement().getValueAsEnum() == ca.uhn.fhir.model.dstu2.valueset.SearchParamTypeEnum.REFERENCE) {
+							for (BoundCodeDt<ResourceTypeEnum> nextTargetType : next.getTarget()) {
+								if (nextTargetType.getValue().equals(resourceName)) {
+									theRevIncludes.add(nextRes.getTypeElement().getValue() + ":" + next.getName());
+								}
+							}
+						}
 					}
 				}
 			}
@@ -1203,7 +1234,7 @@ public class Controller {
 
 	private String parseNarrative(HomeRequest theRequest, EncodingEnum theCtEnum, String theResultBody) {
 		try {
-			IResource resource = theCtEnum.newParser(getContext(theRequest)).parseResource(theResultBody);
+			IResource resource = (IResource) theCtEnum.newParser(getContext(theRequest)).parseResource(theResultBody);
 			String retVal = resource.getText().getDiv().getValueAsString();
 			return StringUtils.defaultString(retVal);
 		} catch (Exception e) {

@@ -9,7 +9,7 @@ import org.hl7.fhir.instance.model.annotations.Block;
 import org.hl7.fhir.instance.model.annotations.Child;
 import org.hl7.fhir.instance.model.annotations.Extension;
 import org.hl7.fhir.instance.model.annotations.ResourceDef;
-import org.hl7.fhir.instance.model.api.IBackboneElement;
+import org.hl7.fhir.instance.model.api.IBaseBackboneElement;
 
 import ca.uhn.fhir.util.ElementUtil;
 
@@ -66,7 +66,7 @@ public class MyObservationWithExtensions extends Patient {
 	 * </p>
 	 */
 	@Block(name = "Observation.someExtensions")
-	public static class MoreExt extends BackboneElement implements IBackboneElement {
+	public static class MoreExt extends BackboneElement implements IBaseBackboneElement {
 
 		@Extension(url = "urn:patientext:moreext:1", definedLocally = false, isModifier = false)
 		@Child(name = "str1", order = 0)

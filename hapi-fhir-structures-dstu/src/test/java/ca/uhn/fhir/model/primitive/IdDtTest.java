@@ -23,6 +23,7 @@ public class IdDtTest {
 		
 		id = new IdDt("#123");
 		assertEquals("#123", id.getValue());
+		assertEquals("#123", id.toUnqualifiedVersionless().getValue());
 		assertTrue(id.isLocal());
 		
 		id = new IdDt("#Medication/499059CE-CDD4-48BC-9014-528A35D15CED/_history/1");
@@ -34,6 +35,22 @@ public class IdDtTest {
 		assertFalse(id.isLocal());
 	}
 	
+	@Test
+	public void testDetectLocalBase() {
+		assertEquals("urn:uuid:180f219f-97a8-486d-99d9-ed631fe4fc57", new IdDt("urn:uuid:180f219f-97a8-486d-99d9-ed631fe4fc57").getValue());
+		assertEquals("urn:uuid:", new IdDt("urn:uuid:180f219f-97a8-486d-99d9-ed631fe4fc57").getBaseUrl());
+		assertEquals("180f219f-97a8-486d-99d9-ed631fe4fc57", new IdDt("urn:uuid:180f219f-97a8-486d-99d9-ed631fe4fc57").getIdPart());
+
+		assertEquals("cid:180f219f-97a8-486d-99d9-ed631fe4fc57", new IdDt("cid:180f219f-97a8-486d-99d9-ed631fe4fc57").getValue());
+		assertEquals("cid:", new IdDt("cid:180f219f-97a8-486d-99d9-ed631fe4fc57").getBaseUrl());
+		assertEquals("180f219f-97a8-486d-99d9-ed631fe4fc57", new IdDt("cid:180f219f-97a8-486d-99d9-ed631fe4fc57").getIdPart());
+
+		assertEquals("#180f219f-97a8-486d-99d9-ed631fe4fc57", new IdDt("#180f219f-97a8-486d-99d9-ed631fe4fc57").getValue());
+		assertEquals("#", new IdDt("#180f219f-97a8-486d-99d9-ed631fe4fc57").getBaseUrl());
+		assertEquals("180f219f-97a8-486d-99d9-ed631fe4fc57", new IdDt("#180f219f-97a8-486d-99d9-ed631fe4fc57").getIdPart());
+	}
+	
+
 	/**
 	 * See #67
 	 */
@@ -41,34 +58,11 @@ public class IdDtTest {
 	public void testComplicatedLocal() {
 		IdDt id = new IdDt("#Patient/cid:Patient-72/_history/1");
 		assertTrue(id.isLocal());
-		assertNull(id.getBaseUrl());
+		assertEquals("#", id.getBaseUrl());
 		assertNull(id.getResourceType());
 		assertNull(id.getVersionIdPart());
-		assertEquals("#Patient/cid:Patient-72/_history/1", id.getIdPart());
+		assertEquals("Patient/cid:Patient-72/_history/1", id.getIdPart());
 		
-		IdDt id2 = new IdDt("#Patient/cid:Patient-72/_history/1");
-		assertEquals(id, id2);
-		
-		id2 = id2.toUnqualified();
-		assertTrue(id2.isLocal());
-		assertNull(id2.getBaseUrl());
-		assertNull(id2.getResourceType());
-		assertNull(id2.getVersionIdPart());
-		assertEquals("#Patient/cid:Patient-72/_history/1", id2.getIdPart());
-
-		id2 = id2.toVersionless();
-		assertTrue(id2.isLocal());
-		assertNull(id2.getBaseUrl());
-		assertNull(id2.getResourceType());
-		assertNull(id2.getVersionIdPart());
-		assertEquals("#Patient/cid:Patient-72/_history/1", id2.getIdPart());
-
-		id2 = id2.toUnqualifiedVersionless();
-		assertTrue(id2.isLocal());
-		assertNull(id2.getBaseUrl());
-		assertNull(id2.getResourceType());
-		assertNull(id2.getVersionIdPart());
-		assertEquals("#Patient/cid:Patient-72/_history/1", id2.getIdPart());
 	}
 	
 	@Test
@@ -213,7 +207,7 @@ public class IdDtTest {
 
 	@BeforeClass
 	public static void beforeClass() {
-		ourCtx = new FhirContext();
+		ourCtx = FhirContext.forDstu1();
 	}
 
 }

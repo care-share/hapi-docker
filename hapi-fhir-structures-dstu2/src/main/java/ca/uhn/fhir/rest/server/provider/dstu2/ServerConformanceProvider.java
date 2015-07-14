@@ -25,7 +25,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.servlet.http.HttpServletRequest;
@@ -36,11 +39,14 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.context.RuntimeSearchParam;
 import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.dstu2.resource.Conformance;
-import ca.uhn.fhir.model.dstu2.resource.OperationDefinition;
 import ca.uhn.fhir.model.dstu2.resource.Conformance.Rest;
 import ca.uhn.fhir.model.dstu2.resource.Conformance.RestResource;
 import ca.uhn.fhir.model.dstu2.resource.Conformance.RestResourceInteraction;
 import ca.uhn.fhir.model.dstu2.resource.Conformance.RestResourceSearchParam;
+import ca.uhn.fhir.model.dstu2.resource.OperationDefinition;
+import ca.uhn.fhir.model.dstu2.resource.OperationDefinition.Parameter;
+import ca.uhn.fhir.model.dstu2.valueset.ConformanceResourceStatusEnum;
+import ca.uhn.fhir.model.dstu2.valueset.OperationParameterUseEnum;
 import ca.uhn.fhir.model.dstu2.valueset.ResourceTypeEnum;
 import ca.uhn.fhir.model.dstu2.valueset.RestfulConformanceModeEnum;
 import ca.uhn.fhir.model.dstu2.valueset.SystemRestfulInteractionEnum;
@@ -52,6 +58,7 @@ import ca.uhn.fhir.rest.method.BaseMethodBinding;
 import ca.uhn.fhir.rest.method.DynamicSearchMethodBinding;
 import ca.uhn.fhir.rest.method.IParameter;
 import ca.uhn.fhir.rest.method.OperationMethodBinding;
+import ca.uhn.fhir.rest.method.OperationParameter;
 import ca.uhn.fhir.rest.method.SearchMethodBinding;
 import ca.uhn.fhir.rest.method.SearchParameter;
 import ca.uhn.fhir.rest.server.Constants;
@@ -64,8 +71,10 @@ import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
  * Server FHIR Provider which serves the conformance statement for a RESTful server implementation
  * 
  * <p>
- * Note: This class is safe to extend, but it is important to note that the same instance of {@link Conformance} is always returned unless {@link #setCache(boolean)} is called with a value of
- * <code>false</code>. This means that if you are adding anything to the returned conformance instance on each call you should call <code>setCache(false)</code> in your provider constructor.
+ * Note: This class is safe to extend, but it is important to note that the same instance of {@link Conformance} is
+ * always returned unless {@link #setCache(boolean)} is called with a value of <code>false</code>. This means that if
+ * you are adding anything to the returned conformance instance on each call you should call
+ * <code>setCache(false)</code> in your provider constructor.
  * </p>
  */
 public class ServerConformanceProvider implements IServerConformanceProvider<Conformance> {
@@ -80,8 +89,9 @@ public class ServerConformanceProvider implements IServerConformanceProvider<Con
 	}
 
 	/**
-	 * Gets the value of the "publisher" that will be placed in the generated conformance statement. As this is a mandatory element, the value should not be null (although this is not enforced). The
-	 * value defaults to "Not provided" but may be set to null, which will cause this element to be omitted.
+	 * Gets the value of the "publisher" that will be placed in the generated conformance statement. As this is a
+	 * mandatory element, the value should not be null (although this is not enforced). The value defaults to
+	 * "Not provided" but may be set to null, which will cause this element to be omitted.
 	 */
 	public String getPublisher() {
 		return myPublisher;
@@ -100,7 +110,7 @@ public class ServerConformanceProvider implements IServerConformanceProvider<Con
 		retVal.setDate(DateTimeDt.withCurrentTime());
 		retVal.setFhirVersion("0.5.0"); // TODO: pull from model
 		retVal.setAcceptUnknown(false); // TODO: make this configurable - this is a fairly big effort since the parser
-										// needs to be modified to actually allow it
+		// needs to be modified to actually allow it
 
 		retVal.getImplementation().setDescription(myRestfulServer.getImplementationDescription());
 		retVal.getSoftware().setName(myRestfulServer.getServerName());
@@ -113,95 +123,159 @@ public class ServerConformanceProvider implements IServerConformanceProvider<Con
 
 		Set<SystemRestfulInteractionEnum> systemOps = new HashSet<SystemRestfulInteractionEnum>();
 
-		List<ResourceBinding> bindings = new ArrayList<ResourceBinding>(myRestfulServer.getResourceBindings());
-		Collections.sort(bindings, new Comparator<ResourceBinding>() {
-			@Override
-			public int compare(ResourceBinding theArg0, ResourceBinding theArg1) {
-				return theArg0.getResourceName().compareToIgnoreCase(theArg1.getResourceName());
-			}
-		});
-
-		for (ResourceBinding next : bindings) {
-
-			Set<TypeRestfulInteractionEnum> resourceOps = new HashSet<TypeRestfulInteractionEnum>();
-			RestResource resource = rest.addResource();
-
+		Map<String, List<BaseMethodBinding<?>>> resourceToMethods = new TreeMap<String, List<BaseMethodBinding<?>>>();
+		for (ResourceBinding next : myRestfulServer.getResourceBindings()) {
 			String resourceName = next.getResourceName();
-			RuntimeResourceDefinition def = myRestfulServer.getFhirContext().getResourceDefinition(resourceName);
-			resource.getTypeElement().setValue(def.getName());
-			resource.getProfile().setReference(new IdDt(def.getResourceProfile(myRestfulServer.getServerBaseForRequest(theRequest))));
-
-			TreeSet<String> includes = new TreeSet<String>();
-
-			// Map<String, Conformance.RestResourceSearchParam> nameToSearchParam = new HashMap<String,
-			// Conformance.RestResourceSearchParam>();
 			for (BaseMethodBinding<?> nextMethodBinding : next.getMethodBindings()) {
-				if (nextMethodBinding.getResourceOperationType() != null) {
-					String resOpCode = nextMethodBinding.getResourceOperationType().getCode();
-					if (resOpCode != null) {
-						TypeRestfulInteractionEnum resOp = TypeRestfulInteractionEnum.VALUESET_BINDER.fromCodeString(resOpCode);
-						if (resOp == null) {
-							throw new InternalErrorException("Unknown type-restful-interaction: " + resOpCode);
-						}
-						if (resourceOps.contains(resOp) == false) {
-							resourceOps.add(resOp);
-							resource.addInteraction().setCode(resOp);
-						}
-					}
+				if (resourceToMethods.containsKey(resourceName) == false) {
+					resourceToMethods.put(resourceName, new ArrayList<BaseMethodBinding<?>>());
 				}
-
-				if (nextMethodBinding.getSystemOperationType() != null) {
-					String sysOpCode = nextMethodBinding.getSystemOperationType().getCode();
-					if (sysOpCode != null) {
-						SystemRestfulInteractionEnum sysOp = SystemRestfulInteractionEnum.VALUESET_BINDER.fromCodeString(sysOpCode);
-						if (sysOp == null) {
-							throw new InternalErrorException("Unknown system-restful-interaction: " + sysOpCode);
-						}
-						if (systemOps.contains(sysOp) == false) {
-							systemOps.add(sysOp);
-							rest.addInteraction().setCode(sysOp);
-						}
-					}
-				}
-
-				if (nextMethodBinding instanceof SearchMethodBinding) {
-					handleSearchMethodBinding(rest, resource, resourceName, def, includes, (SearchMethodBinding) nextMethodBinding);
-				} else if (nextMethodBinding instanceof DynamicSearchMethodBinding) {
-					handleDynamicSearchMethodBinding(resource, def, includes, (DynamicSearchMethodBinding) nextMethodBinding);
-				} else if (nextMethodBinding instanceof OperationMethodBinding) {
-					OperationMethodBinding methodBinding = (OperationMethodBinding)nextMethodBinding;
-					OperationDefinition op = new OperationDefinition();
-//					op.
-				}
-
-				Collections.sort(resource.getInteraction(), new Comparator<RestResourceInteraction>() {
-					@Override
-					public int compare(RestResourceInteraction theO1, RestResourceInteraction theO2) {
-						TypeRestfulInteractionEnum o1 = theO1.getCodeElement().getValueAsEnum();
-						TypeRestfulInteractionEnum o2 = theO2.getCodeElement().getValueAsEnum();
-						if (o1 == null && o2 == null) {
-							return 0;
-						}
-						if (o1 == null) {
-							return 1;
-						}
-						if (o2 == null) {
-							return -1;
-						}
-						return o1.ordinal() - o2.ordinal();
-					}
-				});
-
+				resourceToMethods.get(resourceName).add(nextMethodBinding);
 			}
-
-			for (String nextInclude : includes) {
-				resource.addSearchInclude(nextInclude);
+		}
+		for (BaseMethodBinding<?> nextMethodBinding : myRestfulServer.getServerBindings()) {
+			String resourceName = "";
+			if (resourceToMethods.containsKey(resourceName) == false) {
+				resourceToMethods.put(resourceName, new ArrayList<BaseMethodBinding<?>>());
 			}
+			resourceToMethods.get(resourceName).add(nextMethodBinding);
+		}
 
+		for (Entry<String, List<BaseMethodBinding<?>>> nextEntry : resourceToMethods.entrySet()) {
+
+			if (nextEntry.getKey().isEmpty() == false) {
+				Set<TypeRestfulInteractionEnum> resourceOps = new HashSet<TypeRestfulInteractionEnum>();
+				RestResource resource = rest.addResource();
+				String resourceName = nextEntry.getKey();
+				RuntimeResourceDefinition def = myRestfulServer.getFhirContext().getResourceDefinition(resourceName);
+				resource.getTypeElement().setValue(def.getName());
+				resource.getProfile().setReference(new IdDt(def.getResourceProfile(myRestfulServer.getServerBaseForRequest(theRequest))));
+
+				TreeSet<String> includes = new TreeSet<String>();
+
+				// Map<String, Conformance.RestResourceSearchParam> nameToSearchParam = new HashMap<String,
+				// Conformance.RestResourceSearchParam>();
+				for (BaseMethodBinding<?> nextMethodBinding : nextEntry.getValue()) {
+					if (nextMethodBinding.getResourceOperationType() != null) {
+						String resOpCode = nextMethodBinding.getResourceOperationType().getCode();
+						if (resOpCode != null) {
+							TypeRestfulInteractionEnum resOp = TypeRestfulInteractionEnum.VALUESET_BINDER.fromCodeString(resOpCode);
+							if (resOp == null) {
+								throw new InternalErrorException("Unknown type-restful-interaction: " + resOpCode);
+							}
+							if (resourceOps.contains(resOp) == false) {
+								resourceOps.add(resOp);
+								resource.addInteraction().setCode(resOp);
+							}
+							if ("vread".equals(resOpCode)) {
+								// vread implies read
+								resOp = TypeRestfulInteractionEnum.READ;
+								if (resourceOps.contains(resOp) == false) {
+									resourceOps.add(resOp);
+									resource.addInteraction().setCode(resOp);
+								}
+							}
+
+							if (nextMethodBinding.isSupportsConditional()) {
+								switch (resOp) {
+								case CREATE:
+									resource.setConditionalCreate(true);
+									break;
+								case DELETE:
+									resource.setConditionalDelete(true);
+									break;
+								case UPDATE:
+									resource.setConditionalUpdate(true);
+									break;
+								default:
+									break;
+								}
+							}
+						}
+					}
+
+					checkBindingForSystemOps(rest, systemOps, nextMethodBinding);
+
+					if (nextMethodBinding instanceof SearchMethodBinding) {
+						handleSearchMethodBinding(rest, resource, resourceName, def, includes, (SearchMethodBinding) nextMethodBinding);
+					} else if (nextMethodBinding instanceof DynamicSearchMethodBinding) {
+						handleDynamicSearchMethodBinding(resource, def, includes, (DynamicSearchMethodBinding) nextMethodBinding);
+					} else if (nextMethodBinding instanceof OperationMethodBinding) {
+						OperationMethodBinding methodBinding = (OperationMethodBinding) nextMethodBinding;
+						OperationDefinition op = new OperationDefinition();
+						rest.addOperation().setName(methodBinding.getName()).getDefinition().setResource(op);
+						;
+
+						op.setStatus(ConformanceResourceStatusEnum.ACTIVE);
+						op.setDescription(methodBinding.getDescription());
+						op.setIdempotent(methodBinding.isIdempotent());
+						op.setCode(methodBinding.getName());
+						op.setInstance(methodBinding.isInstanceLevel());
+						op.addType().setValue(methodBinding.getResourceName());
+
+						for (IParameter nextParamUntyped : methodBinding.getParameters()) {
+							if (nextParamUntyped instanceof OperationParameter) {
+								OperationParameter nextParam = (OperationParameter) nextParamUntyped;
+								Parameter param = op.addParameter();
+								param.setUse(OperationParameterUseEnum.IN);
+								if (nextParam.getParamType() != null) {
+									param.setType(nextParam.getParamType().getCode());
+								}
+								param.setMin(nextParam.getMin());
+								param.setMax(nextParam.getMax() == -1 ? "*" : Integer.toString(nextParam.getMax()));
+								param.setName(nextParam.getName());
+							}
+						}
+					}
+
+					Collections.sort(resource.getInteraction(), new Comparator<RestResourceInteraction>() {
+						@Override
+						public int compare(RestResourceInteraction theO1, RestResourceInteraction theO2) {
+							TypeRestfulInteractionEnum o1 = theO1.getCodeElement().getValueAsEnum();
+							TypeRestfulInteractionEnum o2 = theO2.getCodeElement().getValueAsEnum();
+							if (o1 == null && o2 == null) {
+								return 0;
+							}
+							if (o1 == null) {
+								return 1;
+							}
+							if (o2 == null) {
+								return -1;
+							}
+							return o1.ordinal() - o2.ordinal();
+						}
+					});
+
+				}
+
+				for (String nextInclude : includes) {
+					resource.addSearchInclude(nextInclude);
+				}
+			} else {
+				for (BaseMethodBinding<?> nextMethodBinding : nextEntry.getValue()) {
+					checkBindingForSystemOps(rest, systemOps, nextMethodBinding);
+				}
+			}
 		}
 
 		myConformance = retVal;
 		return retVal;
+	}
+
+	private void checkBindingForSystemOps(Rest rest, Set<SystemRestfulInteractionEnum> systemOps, BaseMethodBinding<?> nextMethodBinding) {
+		if (nextMethodBinding.getSystemOperationType() != null) {
+			String sysOpCode = nextMethodBinding.getSystemOperationType().getCode();
+			if (sysOpCode != null) {
+				SystemRestfulInteractionEnum sysOp = SystemRestfulInteractionEnum.VALUESET_BINDER.fromCodeString(sysOpCode);
+				if (sysOp == null) {
+					throw new InternalErrorException("Unknown system-restful-interaction: " + sysOpCode);
+				}
+				if (systemOps.contains(sysOp) == false) {
+					systemOps.add(sysOp);
+					rest.addInteraction().setCode(sysOp);
+				}
+			}
+		}
 	}
 
 	private void handleDynamicSearchMethodBinding(RestResource resource, RuntimeResourceDefinition def, TreeSet<String> includes, DynamicSearchMethodBinding searchMethodBinding) {
@@ -331,8 +405,9 @@ public class ServerConformanceProvider implements IServerConformanceProvider<Con
 	}
 
 	/**
-	 * Sets the value of the "publisher" that will be placed in the generated conformance statement. As this is a mandatory element, the value should not be null (although this is not enforced). The
-	 * value defaults to "Not provided" but may be set to null, which will cause this element to be omitted.
+	 * Sets the value of the "publisher" that will be placed in the generated conformance statement. As this is a
+	 * mandatory element, the value should not be null (although this is not enforced). The value defaults to
+	 * "Not provided" but may be set to null, which will cause this element to be omitted.
 	 */
 	public void setPublisher(String thePublisher) {
 		myPublisher = thePublisher;

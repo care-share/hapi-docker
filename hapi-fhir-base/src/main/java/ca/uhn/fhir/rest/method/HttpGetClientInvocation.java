@@ -29,7 +29,6 @@ import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpRequestBase;
 
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.rest.client.BaseHttpClientInvocation;
@@ -79,7 +78,7 @@ public class HttpGetClientInvocation extends BaseHttpClientInvocation {
 	}
 
 	@Override
-	public HttpGet asHttpRequest(String theUrlBase, Map<String, List<String>> theExtraParams, EncodingEnum theEncoding) {
+	public HttpGet asHttpRequest(String theUrlBase, Map<String, List<String>> theExtraParams, EncodingEnum theEncoding, Boolean thePrettyPrint) {
 		StringBuilder b = new StringBuilder();
 		
 		if (!myUrlPath.contains("://")) {

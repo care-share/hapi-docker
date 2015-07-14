@@ -28,6 +28,9 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.hl7.fhir.instance.model.api.IBaseDatatype;
+import org.hl7.fhir.instance.model.api.IBaseReference;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IIdType;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.BaseIdentifiableElement;
@@ -38,10 +41,10 @@ import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.client.BaseClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 
-public abstract class BaseResourceReferenceDt extends BaseIdentifiableElement implements IBaseDatatype {
+public abstract class BaseResourceReferenceDt extends BaseIdentifiableElement implements IBaseDatatype, IBaseReference {
 
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(BaseResourceReferenceDt.class);
-	private IResource myResource;
+	private IBaseResource myResource;
 
 	/**
 	 * Constructor
@@ -54,26 +57,31 @@ public abstract class BaseResourceReferenceDt extends BaseIdentifiableElement im
 	 * Constructor
 	 * 
 	 * @param theResource
-	 *            The loaded resource itself
+	 *           The loaded resource itself
 	 */
 	public BaseResourceReferenceDt(IResource theResource) {
 		myResource = theResource;
 		setReference(theResource.getId());
 	}
 
+	@Override
 	public abstract StringDt getDisplayElement();
 
 	public abstract IdDt getReference();
 
 	/**
-	 * Gets the actual loaded and parsed resource instance, <b>if it is already present</b>. This method will return the resource instance only if it has previously been loaded using
-	 * {@link #loadResource(IRestfulClient)} or it was contained within the resource containing this resource.
+	 * Gets the actual loaded and parsed resource instance, <b>if it is already present</b>. This method will return the
+	 * resource instance only if it has previously been loaded using {@link #loadResource(IRestfulClient)} or it was
+	 * contained within the resource containing this resource.
 	 *
-	 * See the FHIR specification section on <a href="http://www.hl7.org/implement/standards/fhir/references.html#id">contained resources</a> for more information.
+	 * See the FHIR specification section on <a
+	 * href="http://www.hl7.org/implement/standards/fhir/references.html#id">contained resources</a> for more
+	 * information.
 	 * 
 	 * @see #loadResource(IRestfulClient)
 	 */
-	public IResource getResource() {
+	@Override
+	public IBaseResource getResource() {
 		return myResource;
 	}
 
@@ -83,10 +91,11 @@ public abstract class BaseResourceReferenceDt extends BaseIdentifiableElement im
 	}
 
 	/**
-	 * Returns the referenced resource, fetching it <b>if it has not already been loaded</b>. This method invokes the HTTP client to retrieve the resource unless it has already been loaded, or was a
-	 * contained resource in which case it is simply returned.
+	 * Returns the referenced resource, fetching it <b>if it has not already been loaded</b>. This method invokes the
+	 * HTTP client to retrieve the resource unless it has already been loaded, or was a contained resource in which case
+	 * it is simply returned.
 	 */
-	public IResource loadResource(IRestfulClient theClient) throws IOException {
+	public IBaseResource loadResource(IRestfulClient theClient) throws IOException {
 		if (myResource != null) {
 			return myResource;
 		}
@@ -127,7 +136,19 @@ public abstract class BaseResourceReferenceDt extends BaseIdentifiableElement im
 
 	public abstract BaseResourceReferenceDt setReference(IdDt theReference);
 
-	public void setResource(IResource theResource) {
+	public BaseResourceReferenceDt setReference(IIdType theReference) {
+		if (theReference instanceof IdDt) {
+			setReference((IdDt) theReference);
+		} else if (theReference != null) {
+			setReference(new IdDt(theReference.getValue()));
+		} else {
+			setReference((IdDt) null);
+		}
+		return this;
+	}
+
+	@Override
+	public void setResource(IBaseResource theResource) {
 		myResource = theResource;
 	}
 

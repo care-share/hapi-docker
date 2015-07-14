@@ -38,6 +38,8 @@ package ca.uhn.fhir.model.dstu2.composite;
 
 import java.util.List;
 
+import org.hl7.fhir.instance.model.api.IIdType;
+
 import ca.uhn.fhir.model.api.ICompositeDatatype;
 import ca.uhn.fhir.model.api.IElement;
 import ca.uhn.fhir.model.api.IResource;
@@ -114,6 +116,17 @@ public class ResourceReferenceDt
 		setReference(theResourceId);
 	}
 
+	/**
+	 * Constructor which accepts a reference directly (this can be an ID, a partial/relative URL or a complete/absolute
+	 * URL)
+	 * 
+	 * @param theResourceId
+	 *            The reference itself
+	 */
+	public ResourceReferenceDt(IIdType theResourceId) {
+		setReference(theResourceId);
+	}
+
 	@Child(name="reference", type=IdDt.class, order=0, min=0, max=1)	
 	@Description(
 		shortDefinition="Relative, internal or absolute URL reference",
@@ -155,6 +168,12 @@ public class ResourceReferenceDt
 		}
 		return myReference;
 	}
+
+	@Override
+	public IdDt getReferenceElement() {
+		return getReference();
+	}
+
 
 	/**
 	 * Sets the value(s) for <b>reference</b> (Relative, internal or absolute URL reference)

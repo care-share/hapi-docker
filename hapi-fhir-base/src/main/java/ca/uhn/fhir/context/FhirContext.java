@@ -30,8 +30,8 @@ import java.util.Map;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.text.WordUtils;
-import org.hl7.fhir.instance.model.IBase;
-import org.hl7.fhir.instance.model.IBaseResource;
+import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.i18n.HapiLocalizer;
 import ca.uhn.fhir.model.api.IElement;
@@ -41,7 +41,9 @@ import ca.uhn.fhir.model.view.ViewGenerator;
 import ca.uhn.fhir.narrative.INarrativeGenerator;
 import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.parser.IParserErrorHandler;
 import ca.uhn.fhir.parser.JsonParser;
+import ca.uhn.fhir.parser.LenientErrorHandler;
 import ca.uhn.fhir.parser.XmlParser;
 import ca.uhn.fhir.rest.client.IGenericClient;
 import ca.uhn.fhir.rest.client.IRestfulClientFactory;
@@ -77,13 +79,14 @@ public class FhirContext {
 	private volatile Map<Class<? extends IBase>, BaseRuntimeElementDefinition<?>> myClassToElementDefinition = Collections.emptyMap();
 	private volatile Map<String, RuntimeResourceDefinition> myIdToResourceDefinition = Collections.emptyMap();
 	private HapiLocalizer myLocalizer = new HapiLocalizer();
-	private volatile Map<String, RuntimeResourceDefinition> myNameToElementDefinition = Collections.emptyMap();
-	private Map<String, Class<? extends IBaseResource>> myNameToResourceType;
+	private volatile Map<String, BaseRuntimeElementDefinition<?>> myNameToElementDefinition = Collections.emptyMap();
+	private volatile Map<String, RuntimeResourceDefinition> myNameToResourceDefinition = Collections.emptyMap();
+	private volatile Map<String, Class<? extends IBaseResource>> myNameToResourceType;
 	private volatile INarrativeGenerator myNarrativeGenerator;
+	private volatile IParserErrorHandler myParserErrorHandler = new LenientErrorHandler();
 	private volatile IRestfulClientFactory myRestfulClientFactory;
 	private volatile RuntimeChildUndeclaredExtensionDefinition myRuntimeChildUndeclaredExtensionDefinition;
 	private final IFhirVersion myVersion;
-
 	private Map<FhirVersionEnum, Map<String, Class<? extends IBaseResource>>> myVersionToNameToResourceType = Collections.emptyMap();
 
 	/**
@@ -127,7 +130,11 @@ public class FhirContext {
 			throw new IllegalStateException(getLocalizer().getMessage(FhirContext.class, "noStructures"));
 		}
 
-		ourLog.info("Creating new FHIR context for FHIR version [{}]", myVersion.getVersion().name());
+		if (theVersion == null) {
+			ourLog.info("Creating new FhirContext with auto-detected version [{}]. It is recommended to explicitly select a version for future compatibility by invoking FhirContext.forDstuX()", myVersion.getVersion().name());
+		} else {
+			ourLog.info("Creating new FHIR context for FHIR version [{}]", myVersion.getVersion().name());
+		}
 
 		scanResourceTypes(toElementList(theResourceTypes));
 	}
@@ -149,9 +156,24 @@ public class FhirContext {
 		return retVal;
 	}
 
+	/**
+	 * Returns the scanned runtime model for the given type. This is an advanced feature which is generally only needed
+	 * for extending the core library.
+	 */
+	public BaseRuntimeElementDefinition<?> getElementDefinition(String theElementName) {
+		return myNameToElementDefinition.get(theElementName);
+	}
+	
 	/** For unit tests only */
 	int getElementDefinitionCount() {
 		return myClassToElementDefinition.size();
+	}
+
+	/**
+	 * Returns all element definitions (resources, datatypes, etc.)
+	 */
+	public Collection<BaseRuntimeElementDefinition<?>> getElementDefinitions() {
+		return Collections.unmodifiableCollection(myClassToElementDefinition.values());
 	}
 
 	/**
@@ -229,6 +251,8 @@ public class FhirContext {
 	 */
 	@SuppressWarnings("unchecked")
 	public RuntimeResourceDefinition getResourceDefinition(String theResourceName) {
+		Validate.notBlank(theResourceName, "theResourceName must not be blank");
+		
 		String resourceName = theResourceName;
 
 		/*
@@ -241,7 +265,7 @@ public class FhirContext {
 
 		Validate.notBlank(resourceName, "Resource name must not be blank");
 
-		RuntimeResourceDefinition retVal = myNameToElementDefinition.get(resourceName);
+		RuntimeResourceDefinition retVal = myNameToResourceDefinition.get(resourceName);
 
 		if (retVal == null) {
 			Class<? extends IBaseResource> clazz = myNameToResourceType.get(resourceName.toLowerCase());
@@ -308,7 +332,7 @@ public class FhirContext {
 	 * </p>
 	 */
 	public IParser newJsonParser() {
-		return new JsonParser(this);
+		return new JsonParser(this, myParserErrorHandler);
 	}
 
 	/**
@@ -385,7 +409,7 @@ public class FhirContext {
 	 * </p>
 	 */
 	public IParser newXmlParser() {
-		return new XmlParser(this);
+		return new XmlParser(this, myParserErrorHandler);
 	}
 
 	private BaseRuntimeElementDefinition<?> scanDatatype(Class<? extends IElement> theResourceType) {
@@ -408,10 +432,14 @@ public class FhirContext {
 			myRuntimeChildUndeclaredExtensionDefinition = scanner.getRuntimeChildUndeclaredExtensionDefinition();
 		}
 
-		Map<String, RuntimeResourceDefinition> nameToElementDefinition = new HashMap<String, RuntimeResourceDefinition>();
+		Map<String, BaseRuntimeElementDefinition<?>> nameToElementDefinition = new HashMap<String, BaseRuntimeElementDefinition<?>>();
 		nameToElementDefinition.putAll(myNameToElementDefinition);
-		nameToElementDefinition.putAll(scanner.getNameToResourceDefinitions());
+		nameToElementDefinition.putAll(scanner.getNameToElementDefinitions());
 
+		Map<String, RuntimeResourceDefinition> nameToResourceDefinition = new HashMap<String, RuntimeResourceDefinition>();
+		nameToResourceDefinition.putAll(myNameToResourceDefinition);
+		nameToResourceDefinition.putAll(scanner.getNameToResourceDefinition());
+		
 		Map<Class<? extends IBase>, BaseRuntimeElementDefinition<?>> classToElementDefinition = new HashMap<Class<? extends IBase>, BaseRuntimeElementDefinition<?>>();
 		classToElementDefinition.putAll(myClassToElementDefinition);
 		classToElementDefinition.putAll(scanner.getClassToElementDefinitions());
@@ -423,6 +451,7 @@ public class FhirContext {
 		myNameToElementDefinition = nameToElementDefinition;
 		myClassToElementDefinition = classToElementDefinition;
 		myIdToResourceDefinition = idToElementDefinition;
+		myNameToResourceDefinition = nameToResourceDefinition;
 
 		myNameToResourceType = scanner.getNameToResourceType();
 
@@ -442,6 +471,16 @@ public class FhirContext {
 			theNarrativeGenerator.setFhirContext(this);
 		}
 		myNarrativeGenerator = theNarrativeGenerator;
+	}
+
+	/**
+	 * Sets a parser error handler to use by default on all parsers
+	 * 
+	 * @param theParserErrorHandler The error handler
+	 */
+	public void setParserErrorHandler(IParserErrorHandler theParserErrorHandler) {
+		Validate.notNull(theParserErrorHandler, "theParserErrorHandler must not be null");
+		myParserErrorHandler = theParserErrorHandler;
 	}
 
 	@SuppressWarnings("unchecked")

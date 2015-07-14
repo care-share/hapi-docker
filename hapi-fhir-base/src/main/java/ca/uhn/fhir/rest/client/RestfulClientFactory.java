@@ -43,16 +43,18 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IPrimitiveType;
 
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import ca.uhn.fhir.model.base.resource.BaseConformance;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
-import ca.uhn.fhir.rest.client.exceptions.FhirClientInnapropriateForServerException;
+import ca.uhn.fhir.rest.client.exceptions.FhirClientInappropriateForServerException;
 import ca.uhn.fhir.rest.method.BaseMethodBinding;
 import ca.uhn.fhir.rest.server.Constants;
+import ca.uhn.fhir.util.FhirTerser;
 
 public class RestfulClientFactory implements IRestfulClientFactory {
 
@@ -83,10 +85,12 @@ public class RestfulClientFactory implements IRestfulClientFactory {
 		myContext = theFhirContext;
 	}
 
+	@Override
 	public int getConnectionRequestTimeout() {
 		return myConnectionRequestTimeout;
 	}
 
+	@Override
 	public int getConnectTimeout() {
 		return myConnectTimeout;
 	}
@@ -272,6 +276,7 @@ public class RestfulClientFactory implements IRestfulClientFactory {
 		myHttpClient = null;
 	}
 
+	@SuppressWarnings("unchecked")
 	void validateServerBase(String theServerBase, HttpClient theHttpClient, BaseClient theClient) {
 
 		GenericClient client = new GenericClient(myContext, theHttpClient, theServerBase, this);
@@ -280,14 +285,21 @@ public class RestfulClientFactory implements IRestfulClientFactory {
 		}
 		client.setDontValidateConformance(true);
 		
-		BaseConformance conformance;
+		IBaseResource conformance;
 		try {
-			conformance = client.conformance();
+			@SuppressWarnings("rawtypes")
+			Class implementingClass = myContext.getResourceDefinition("Conformance").getImplementingClass();
+			conformance = (IBaseResource) client.fetchConformance().ofType(implementingClass).execute();
 		} catch (FhirClientConnectionException e) {
 			throw new FhirClientConnectionException(myContext.getLocalizer().getMessage(RestfulClientFactory.class, "failedToRetrieveConformance", theServerBase + Constants.URL_TOKEN_METADATA), e);
 		}
 
-		String serverFhirVersionString = conformance.getFhirVersionElement().getValueAsString();
+		FhirTerser t = myContext.newTerser();
+		String serverFhirVersionString = null;
+		Object value = t.getSingleValueOrNull(conformance, "fhirVersion");
+		if (value instanceof IPrimitiveType) {
+			serverFhirVersionString = ((IPrimitiveType<?>) value).getValueAsString();
+		}
 		FhirVersionEnum serverFhirVersionEnum = null;
 		if (StringUtils.isBlank(serverFhirVersionString)) {
 			// we'll be lenient and accept this
@@ -307,7 +319,7 @@ public class RestfulClientFactory implements IRestfulClientFactory {
 		if (serverFhirVersionEnum != null) {
 			FhirVersionEnum contextFhirVersion = myContext.getVersion().getVersion();
 			if (!contextFhirVersion.isEquivalentTo(serverFhirVersionEnum)) {
-				throw new FhirClientInnapropriateForServerException(myContext.getLocalizer().getMessage(RestfulClientFactory.class, "wrongVersionInConformance", theServerBase + Constants.URL_TOKEN_METADATA, serverFhirVersionString, serverFhirVersionEnum, contextFhirVersion));
+				throw new FhirClientInappropriateForServerException(myContext.getLocalizer().getMessage(RestfulClientFactory.class, "wrongVersionInConformance", theServerBase + Constants.URL_TOKEN_METADATA, serverFhirVersionString, serverFhirVersionEnum, contextFhirVersion));
 			}
 		}
 		

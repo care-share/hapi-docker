@@ -20,11 +20,14 @@ package ca.uhn.fhir.rest.server;
  * #L%
  */
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IPrimitiveType;
+
 import ca.uhn.fhir.model.api.Bundle;
-import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.model.valueset.BundleTypeEnum;
 
@@ -34,21 +37,21 @@ import ca.uhn.fhir.model.valueset.BundleTypeEnum;
  */
 public interface IVersionSpecificBundleFactory {
 
-	void addResourcesToBundle(List<IResource> theResult, BundleTypeEnum theBundleType, String theServerBase, BundleInclusionRule theBundleInclusionRule, Set<Include> theIncludes);
+	void addResourcesToBundle(List<IBaseResource> theResult, BundleTypeEnum theBundleType, String theServerBase, BundleInclusionRule theBundleInclusionRule, Set<Include> theIncludes);
 
-	void addRootPropertiesToBundle(String theAuthor, String theServerBase, String theCompleteUrl, Integer theTotalResults, BundleTypeEnum theBundleType);
+	void addRootPropertiesToBundle(String theAuthor, String theServerBase, String theCompleteUrl, Integer theTotalResults, BundleTypeEnum theBundleType, IPrimitiveType<Date> theLastUpdated);
 
 	void initializeBundleFromBundleProvider(RestfulServer theServer, IBundleProvider theResult, EncodingEnum theResponseEncoding, String theServerBase, String theCompleteUrl, boolean thePrettyPrint,
 			int theOffset, Integer theCount, String theSearchId, BundleTypeEnum theBundleType, Set<Include> theIncludes);
 
 	Bundle getDstu1Bundle();
 
-	IResource getResourceBundle();
+	IBaseResource getResourceBundle();
 
-	void initializeBundleFromResourceList(String theAuthor, List<IResource> theResult, String theServerBase, String theCompleteUrl, int theTotalResults, BundleTypeEnum theBundleType);
+	void initializeBundleFromResourceList(String theAuthor, List<? extends IBaseResource> theResult, String theServerBase, String theCompleteUrl, int theTotalResults, BundleTypeEnum theBundleType);
 
-	void initializeWithBundleResource(IResource theResource);
+	void initializeWithBundleResource(IBaseResource theResource);
 
-	List<IResource> toListOfResources();
+	List<IBaseResource> toListOfResources();
 
 }

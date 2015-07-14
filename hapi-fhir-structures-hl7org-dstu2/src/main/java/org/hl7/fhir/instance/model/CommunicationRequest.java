@@ -29,16 +29,17 @@ package org.hl7.fhir.instance.model;
   
 */
 
-// Generated on Wed, Feb 18, 2015 12:09-0500 for FHIR v0.4.0
+// Generated on Wed, Jul 8, 2015 17:35-0400 for FHIR v0.5.0
 
 import java.util.*;
 
 import org.hl7.fhir.utilities.Utilities;
 import org.hl7.fhir.instance.model.annotations.ResourceDef;
 import org.hl7.fhir.instance.model.annotations.SearchParamDefinition;
-import org.hl7.fhir.instance.model.annotations.Block;
 import org.hl7.fhir.instance.model.annotations.Child;
 import org.hl7.fhir.instance.model.annotations.Description;
+import org.hl7.fhir.instance.model.annotations.Block;
+import org.hl7.fhir.instance.model.api.*;
 /**
  * A request to convey information. E.g., the CDS system proposes that an alert be sent to a responsible provider, the CDS system proposes that the public health agency be notified about a reportable condition.
  */
@@ -47,43 +48,43 @@ public class CommunicationRequest extends DomainResource {
 
     public enum CommunicationRequestStatus {
         /**
-         * The request has been proposed.
+         * The request has been proposed
          */
         PROPOSED, 
         /**
-         * The request has been planned.
+         * The request has been planned
          */
         PLANNED, 
         /**
-         * The request has been placed.
+         * The request has been placed
          */
         REQUESTED, 
         /**
-         * The receiving system has received the request but not yet decided whether it will be performed.
+         * The receiving system has received the request but not yet decided whether it will be performed
          */
         RECEIVED, 
         /**
-         * The receiving system has accepted the order, but work has not yet commenced.
+         * The receiving system has accepted the order, but work has not yet commenced
          */
         ACCEPTED, 
         /**
-         * The work to fulfill the order is happening.
+         * The work to fulfill the order is happening
          */
         INPROGRESS, 
         /**
-         * The work has been complete, the report(s) released, and no further work is planned.
+         * The work has been complete, the report(s) released, and no further work is planned
          */
         COMPLETED, 
         /**
-         * The request has been held by originating system/user request.
+         * The request has been held by originating system/user request
          */
         SUSPENDED, 
         /**
-         * The receiving system has declined to fulfill the request.
+         * The receiving system has declined to fulfill the request
          */
         REJECTED, 
         /**
-         * The communication was attempted, but due to some procedural error, it could not be completed.
+         * The communication was attempted, but due to some procedural error, it could not be completed
          */
         FAILED, 
         /**
@@ -132,46 +133,46 @@ public class CommunicationRequest extends DomainResource {
         }
         public String getSystem() {
           switch (this) {
-            case PROPOSED: return "";
-            case PLANNED: return "";
-            case REQUESTED: return "";
-            case RECEIVED: return "";
-            case ACCEPTED: return "";
-            case INPROGRESS: return "";
-            case COMPLETED: return "";
-            case SUSPENDED: return "";
-            case REJECTED: return "";
-            case FAILED: return "";
+            case PROPOSED: return "http://hl7.org/fhir/communication-request-status";
+            case PLANNED: return "http://hl7.org/fhir/communication-request-status";
+            case REQUESTED: return "http://hl7.org/fhir/communication-request-status";
+            case RECEIVED: return "http://hl7.org/fhir/communication-request-status";
+            case ACCEPTED: return "http://hl7.org/fhir/communication-request-status";
+            case INPROGRESS: return "http://hl7.org/fhir/communication-request-status";
+            case COMPLETED: return "http://hl7.org/fhir/communication-request-status";
+            case SUSPENDED: return "http://hl7.org/fhir/communication-request-status";
+            case REJECTED: return "http://hl7.org/fhir/communication-request-status";
+            case FAILED: return "http://hl7.org/fhir/communication-request-status";
             default: return "?";
           }
         }
         public String getDefinition() {
           switch (this) {
-            case PROPOSED: return "The request has been proposed.";
-            case PLANNED: return "The request has been planned.";
-            case REQUESTED: return "The request has been placed.";
-            case RECEIVED: return "The receiving system has received the request but not yet decided whether it will be performed.";
-            case ACCEPTED: return "The receiving system has accepted the order, but work has not yet commenced.";
-            case INPROGRESS: return "The work to fulfill the order is happening.";
-            case COMPLETED: return "The work has been complete, the report(s) released, and no further work is planned.";
-            case SUSPENDED: return "The request has been held by originating system/user request.";
-            case REJECTED: return "The receiving system has declined to fulfill the request.";
-            case FAILED: return "The communication was attempted, but due to some procedural error, it could not be completed.";
+            case PROPOSED: return "The request has been proposed";
+            case PLANNED: return "The request has been planned";
+            case REQUESTED: return "The request has been placed";
+            case RECEIVED: return "The receiving system has received the request but not yet decided whether it will be performed";
+            case ACCEPTED: return "The receiving system has accepted the order, but work has not yet commenced";
+            case INPROGRESS: return "The work to fulfill the order is happening";
+            case COMPLETED: return "The work has been complete, the report(s) released, and no further work is planned";
+            case SUSPENDED: return "The request has been held by originating system/user request";
+            case REJECTED: return "The receiving system has declined to fulfill the request";
+            case FAILED: return "The communication was attempted, but due to some procedural error, it could not be completed";
             default: return "?";
           }
         }
         public String getDisplay() {
           switch (this) {
-            case PROPOSED: return "proposed";
-            case PLANNED: return "planned";
-            case REQUESTED: return "requested";
-            case RECEIVED: return "received";
-            case ACCEPTED: return "accepted";
-            case INPROGRESS: return "in-progress";
-            case COMPLETED: return "completed";
-            case SUSPENDED: return "suspended";
-            case REJECTED: return "rejected";
-            case FAILED: return "failed";
+            case PROPOSED: return "Proposed";
+            case PLANNED: return "Planned";
+            case REQUESTED: return "Requested";
+            case RECEIVED: return "Received";
+            case ACCEPTED: return "Accepted";
+            case INPROGRESS: return "In Progress";
+            case COMPLETED: return "Completed";
+            case SUSPENDED: return "Suspended";
+            case REJECTED: return "Rejected";
+            case FAILED: return "Failed";
             default: return "?";
           }
         }
@@ -230,20 +231,26 @@ public class CommunicationRequest extends DomainResource {
     }
 
     @Block()
-    public static class CommunicationRequestPayloadComponent extends BackboneElement {
+    public static class CommunicationRequestPayloadComponent extends BackboneElement implements IBaseBackboneElement {
         /**
          * An individual message part for multi-part messages.
          */
-        @Child(name="content", type={StringType.class, Attachment.class}, order=1, min=1, max=1)
+        @Child(name = "content", type = {StringType.class, Attachment.class}, order=1, min=1, max=1)
         @Description(shortDefinition="Message part content", formalDefinition="An individual message part for multi-part messages." )
         protected Type content;
 
         private static final long serialVersionUID = -1763459053L;
 
+    /*
+     * Constructor
+     */
       public CommunicationRequestPayloadComponent() {
         super();
       }
 
+    /*
+     * Constructor
+     */
       public CommunicationRequestPayloadComponent(Type content) {
         super();
         this.content = content;
@@ -265,6 +272,10 @@ public class CommunicationRequest extends DomainResource {
           return (StringType) this.content;
         }
 
+        public boolean hasContentStringType() throws Exception { 
+          return this.content instanceof StringType;
+        }
+
         /**
          * @return {@link #content} (An individual message part for multi-part messages.)
          */
@@ -274,6 +285,10 @@ public class CommunicationRequest extends DomainResource {
           return (Attachment) this.content;
         }
 
+        public boolean hasContentAttachment() throws Exception { 
+          return this.content instanceof Attachment;
+        }
+
         /**
          * @return {@link #content} (An individual message part for multi-part messages.)
          */
@@ -281,6 +296,10 @@ public class CommunicationRequest extends DomainResource {
           if (!(this.content instanceof Reference))
             throw new Exception("Type mismatch: the type Reference was expected, but "+this.content.getClass().getName()+" was encountered");
           return (Reference) this.content;
+        }
+
+        public boolean hasContentReference() throws Exception { 
+          return this.content instanceof Reference;
         }
 
         public boolean hasContent() { 
@@ -336,33 +355,33 @@ public class CommunicationRequest extends DomainResource {
     /**
      * A unique ID of this request for reference purposes. It must be provided if user wants it returned as part of any output, otherwise it will be auto-generated, if needed, by CDS system. Does not need to be the actual ID of the source system.
      */
-    @Child(name = "identifier", type = {Identifier.class}, order = 0, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "identifier", type = {Identifier.class}, order=0, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="Unique identifier", formalDefinition="A unique ID of this request for reference purposes. It must be provided if user wants it returned as part of any output, otherwise it will be auto-generated, if needed, by CDS system. Does not need to be the actual ID of the source system." )
     protected List<Identifier> identifier;
 
     /**
-     * The type of message such as alert, notification, reminder, instruction, etc.
+     * The type of message to be sent such as alert, notification, reminder, instruction, etc.
      */
-    @Child(name = "category", type = {CodeableConcept.class}, order = 1, min = 0, max = 1)
-    @Description(shortDefinition="Message category", formalDefinition="The type of message such as alert, notification, reminder, instruction, etc." )
+    @Child(name = "category", type = {CodeableConcept.class}, order=1, min=0, max=1)
+    @Description(shortDefinition="Message category", formalDefinition="The type of message to be sent such as alert, notification, reminder, instruction, etc." )
     protected CodeableConcept category;
 
     /**
-     * The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication.
+     * The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication.
      */
-    @Child(name = "sender", type = {Patient.class, Practitioner.class, Device.class, RelatedPerson.class, Organization.class}, order = 2, min = 0, max = 1)
-    @Description(shortDefinition="Message sender", formalDefinition="The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication." )
+    @Child(name = "sender", type = {Device.class, Organization.class, Patient.class, Practitioner.class, RelatedPerson.class}, order=2, min=0, max=1)
+    @Description(shortDefinition="Message sender", formalDefinition="The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication." )
     protected Reference sender;
 
     /**
-     * The actual object that is the target of the reference (The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication.)
+     * The actual object that is the target of the reference (The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication.)
      */
     protected Resource senderTarget;
 
     /**
      * The entity (e.g., person, organization, clinical information system, or device) which is the intended target of the communication.
      */
-    @Child(name = "recipient", type = {Patient.class, Device.class, RelatedPerson.class, Practitioner.class}, order = 3, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "recipient", type = {Device.class, Organization.class, Patient.class, Practitioner.class, RelatedPerson.class}, order=3, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="Message recipient", formalDefinition="The entity (e.g., person, organization, clinical information system, or device) which is the intended target of the communication." )
     protected List<Reference> recipient;
     /**
@@ -374,21 +393,21 @@ public class CommunicationRequest extends DomainResource {
     /**
      * Text, attachment(s), or resource(s) to be communicated to the recipient.
      */
-    @Child(name = "payload", type = {}, order = 4, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "payload", type = {}, order=4, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="Message payload", formalDefinition="Text, attachment(s), or resource(s) to be communicated to the recipient." )
     protected List<CommunicationRequestPayloadComponent> payload;
 
     /**
-     * The communication medium, e.g., email, fax.
+     * The communication medium to be used, e.g., email, fax.
      */
-    @Child(name = "medium", type = {CodeableConcept.class}, order = 5, min = 0, max = Child.MAX_UNLIMITED)
-    @Description(shortDefinition="Communication medium", formalDefinition="The communication medium, e.g., email, fax." )
+    @Child(name = "medium", type = {CodeableConcept.class}, order=5, min=0, max=Child.MAX_UNLIMITED)
+    @Description(shortDefinition="Communication medium", formalDefinition="The communication medium to be used, e.g., email, fax." )
     protected List<CodeableConcept> medium;
 
     /**
      * The responsible person who authorizes this order, e.g., physician. This may be different than the author of the order statement, e.g., clerk, who may have entered the statement into the order entry application.
      */
-    @Child(name = "requester", type = {Practitioner.class, Patient.class, RelatedPerson.class}, order = 6, min = 0, max = 1)
+    @Child(name = "requester", type = {Practitioner.class, Patient.class, RelatedPerson.class}, order=6, min=0, max=1)
     @Description(shortDefinition="Requester of communication", formalDefinition="The responsible person who authorizes this order, e.g., physician. This may be different than the author of the order statement, e.g., clerk, who may have entered the statement into the order entry application." )
     protected Reference requester;
 
@@ -400,14 +419,14 @@ public class CommunicationRequest extends DomainResource {
     /**
      * The status of the proposal or order.
      */
-    @Child(name = "status", type = {CodeType.class}, order = 7, min = 0, max = 1)
+    @Child(name = "status", type = {CodeType.class}, order=7, min=0, max=1)
     @Description(shortDefinition="proposed | planned | requested | received | accepted | in-progress | completed | suspended | rejected | failed", formalDefinition="The status of the proposal or order." )
     protected Enumeration<CommunicationRequestStatus> status;
 
     /**
      * The encounter within which the communication request was created.
      */
-    @Child(name = "encounter", type = {Encounter.class}, order = 8, min = 0, max = 1)
+    @Child(name = "encounter", type = {Encounter.class}, order=8, min=0, max=1)
     @Description(shortDefinition="Encounter leading to message", formalDefinition="The encounter within which the communication request was created." )
     protected Reference encounter;
 
@@ -419,28 +438,28 @@ public class CommunicationRequest extends DomainResource {
     /**
      * The time when this communication is to occur.
      */
-    @Child(name = "scheduledTime", type = {DateTimeType.class}, order = 9, min = 0, max = 1)
+    @Child(name = "scheduledTime", type = {DateTimeType.class}, order=9, min=0, max=1)
     @Description(shortDefinition="When scheduled", formalDefinition="The time when this communication is to occur." )
     protected DateTimeType scheduledTime;
 
     /**
      * The reason or justification for the communication request.
      */
-    @Child(name = "reason", type = {CodeableConcept.class}, order = 10, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "reason", type = {CodeableConcept.class}, order=10, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="Indication for message", formalDefinition="The reason or justification for the communication request." )
     protected List<CodeableConcept> reason;
 
     /**
      * The time when the request was made.
      */
-    @Child(name = "orderedOn", type = {DateTimeType.class}, order = 11, min = 0, max = 1)
+    @Child(name = "orderedOn", type = {DateTimeType.class}, order=11, min=0, max=1)
     @Description(shortDefinition="When ordered or proposed", formalDefinition="The time when the request was made." )
     protected DateTimeType orderedOn;
 
     /**
      * The patient who is the focus of this communication request.
      */
-    @Child(name = "subject", type = {Patient.class}, order = 12, min = 0, max = 1)
+    @Child(name = "subject", type = {Patient.class}, order=12, min=0, max=1)
     @Description(shortDefinition="Focus of message", formalDefinition="The patient who is the focus of this communication request." )
     protected Reference subject;
 
@@ -452,12 +471,15 @@ public class CommunicationRequest extends DomainResource {
     /**
      * Characterizes how quickly the proposed act must be initiated. Includes concepts such as stat, urgent, routine.
      */
-    @Child(name = "priority", type = {CodeableConcept.class}, order = 13, min = 0, max = 1)
+    @Child(name = "priority", type = {CodeableConcept.class}, order=13, min=0, max=1)
     @Description(shortDefinition="Message urgency", formalDefinition="Characterizes how quickly the proposed act must be initiated. Includes concepts such as stat, urgent, routine." )
     protected CodeableConcept priority;
 
     private static final long serialVersionUID = 431529355L;
 
+  /*
+   * Constructor
+   */
     public CommunicationRequest() {
       super();
     }
@@ -492,8 +514,18 @@ public class CommunicationRequest extends DomainResource {
       return t;
     }
 
+    // syntactic sugar
+    public CommunicationRequest addIdentifier(Identifier t) { //3
+      if (t == null)
+        return this;
+      if (this.identifier == null)
+        this.identifier = new ArrayList<Identifier>();
+      this.identifier.add(t);
+      return this;
+    }
+
     /**
-     * @return {@link #category} (The type of message such as alert, notification, reminder, instruction, etc.)
+     * @return {@link #category} (The type of message to be sent such as alert, notification, reminder, instruction, etc.)
      */
     public CodeableConcept getCategory() { 
       if (this.category == null)
@@ -509,7 +541,7 @@ public class CommunicationRequest extends DomainResource {
     }
 
     /**
-     * @param value {@link #category} (The type of message such as alert, notification, reminder, instruction, etc.)
+     * @param value {@link #category} (The type of message to be sent such as alert, notification, reminder, instruction, etc.)
      */
     public CommunicationRequest setCategory(CodeableConcept value) { 
       this.category = value;
@@ -517,7 +549,7 @@ public class CommunicationRequest extends DomainResource {
     }
 
     /**
-     * @return {@link #sender} (The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication.)
+     * @return {@link #sender} (The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication.)
      */
     public Reference getSender() { 
       if (this.sender == null)
@@ -533,7 +565,7 @@ public class CommunicationRequest extends DomainResource {
     }
 
     /**
-     * @param value {@link #sender} (The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication.)
+     * @param value {@link #sender} (The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication.)
      */
     public CommunicationRequest setSender(Reference value) { 
       this.sender = value;
@@ -541,14 +573,14 @@ public class CommunicationRequest extends DomainResource {
     }
 
     /**
-     * @return {@link #sender} The actual object that is the target of the reference. The reference library doesn't populate this, but you can use it to hold the resource if you resolve it. (The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication.)
+     * @return {@link #sender} The actual object that is the target of the reference. The reference library doesn't populate this, but you can use it to hold the resource if you resolve it. (The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication.)
      */
     public Resource getSenderTarget() { 
       return this.senderTarget;
     }
 
     /**
-     * @param value {@link #sender} The actual object that is the target of the reference. The reference library doesn't use these, but you can use it to hold the resource if you resolve it. (The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication.)
+     * @param value {@link #sender} The actual object that is the target of the reference. The reference library doesn't use these, but you can use it to hold the resource if you resolve it. (The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication.)
      */
     public CommunicationRequest setSenderTarget(Resource value) { 
       this.senderTarget = value;
@@ -583,6 +615,16 @@ public class CommunicationRequest extends DomainResource {
         this.recipient = new ArrayList<Reference>();
       this.recipient.add(t);
       return t;
+    }
+
+    // syntactic sugar
+    public CommunicationRequest addRecipient(Reference t) { //3
+      if (t == null)
+        return this;
+      if (this.recipient == null)
+        this.recipient = new ArrayList<Reference>();
+      this.recipient.add(t);
+      return this;
     }
 
     /**
@@ -624,8 +666,18 @@ public class CommunicationRequest extends DomainResource {
       return t;
     }
 
+    // syntactic sugar
+    public CommunicationRequest addPayload(CommunicationRequestPayloadComponent t) { //3
+      if (t == null)
+        return this;
+      if (this.payload == null)
+        this.payload = new ArrayList<CommunicationRequestPayloadComponent>();
+      this.payload.add(t);
+      return this;
+    }
+
     /**
-     * @return {@link #medium} (The communication medium, e.g., email, fax.)
+     * @return {@link #medium} (The communication medium to be used, e.g., email, fax.)
      */
     public List<CodeableConcept> getMedium() { 
       if (this.medium == null)
@@ -643,7 +695,7 @@ public class CommunicationRequest extends DomainResource {
     }
 
     /**
-     * @return {@link #medium} (The communication medium, e.g., email, fax.)
+     * @return {@link #medium} (The communication medium to be used, e.g., email, fax.)
      */
     // syntactic sugar
     public CodeableConcept addMedium() { //3
@@ -652,6 +704,16 @@ public class CommunicationRequest extends DomainResource {
         this.medium = new ArrayList<CodeableConcept>();
       this.medium.add(t);
       return t;
+    }
+
+    // syntactic sugar
+    public CommunicationRequest addMedium(CodeableConcept t) { //3
+      if (t == null)
+        return this;
+      if (this.medium == null)
+        this.medium = new ArrayList<CodeableConcept>();
+      this.medium.add(t);
+      return this;
     }
 
     /**
@@ -865,6 +927,16 @@ public class CommunicationRequest extends DomainResource {
       return t;
     }
 
+    // syntactic sugar
+    public CommunicationRequest addReason(CodeableConcept t) { //3
+      if (t == null)
+        return this;
+      if (this.reason == null)
+        this.reason = new ArrayList<CodeableConcept>();
+      this.reason.add(t);
+      return this;
+    }
+
     /**
      * @return {@link #orderedOn} (The time when the request was made.). This is the underlying object with id, value and extensions. The accessor "getOrderedOn" gives direct access to the value
      */
@@ -985,11 +1057,11 @@ public class CommunicationRequest extends DomainResource {
       protected void listChildren(List<Property> childrenList) {
         super.listChildren(childrenList);
         childrenList.add(new Property("identifier", "Identifier", "A unique ID of this request for reference purposes. It must be provided if user wants it returned as part of any output, otherwise it will be auto-generated, if needed, by CDS system. Does not need to be the actual ID of the source system.", 0, java.lang.Integer.MAX_VALUE, identifier));
-        childrenList.add(new Property("category", "CodeableConcept", "The type of message such as alert, notification, reminder, instruction, etc.", 0, java.lang.Integer.MAX_VALUE, category));
-        childrenList.add(new Property("sender", "Reference(Patient|Practitioner|Device|RelatedPerson|Organization)", "The entity (e.g., person, organization, clinical information system, or device) which is the source of the communication.", 0, java.lang.Integer.MAX_VALUE, sender));
-        childrenList.add(new Property("recipient", "Reference(Patient|Device|RelatedPerson|Practitioner)", "The entity (e.g., person, organization, clinical information system, or device) which is the intended target of the communication.", 0, java.lang.Integer.MAX_VALUE, recipient));
+        childrenList.add(new Property("category", "CodeableConcept", "The type of message to be sent such as alert, notification, reminder, instruction, etc.", 0, java.lang.Integer.MAX_VALUE, category));
+        childrenList.add(new Property("sender", "Reference(Device|Organization|Patient|Practitioner|RelatedPerson)", "The entity (e.g., person, organization, clinical information system, or device) which is to be the source of the communication.", 0, java.lang.Integer.MAX_VALUE, sender));
+        childrenList.add(new Property("recipient", "Reference(Device|Organization|Patient|Practitioner|RelatedPerson)", "The entity (e.g., person, organization, clinical information system, or device) which is the intended target of the communication.", 0, java.lang.Integer.MAX_VALUE, recipient));
         childrenList.add(new Property("payload", "", "Text, attachment(s), or resource(s) to be communicated to the recipient.", 0, java.lang.Integer.MAX_VALUE, payload));
-        childrenList.add(new Property("medium", "CodeableConcept", "The communication medium, e.g., email, fax.", 0, java.lang.Integer.MAX_VALUE, medium));
+        childrenList.add(new Property("medium", "CodeableConcept", "The communication medium to be used, e.g., email, fax.", 0, java.lang.Integer.MAX_VALUE, medium));
         childrenList.add(new Property("requester", "Reference(Practitioner|Patient|RelatedPerson)", "The responsible person who authorizes this order, e.g., physician. This may be different than the author of the order statement, e.g., clerk, who may have entered the statement into the order entry application.", 0, java.lang.Integer.MAX_VALUE, requester));
         childrenList.add(new Property("status", "code", "The status of the proposal or order.", 0, java.lang.Integer.MAX_VALUE, status));
         childrenList.add(new Property("encounter", "Reference(Encounter)", "The encounter within which the communication request was created.", 0, java.lang.Integer.MAX_VALUE, encounter));
@@ -1087,27 +1159,27 @@ public class CommunicationRequest extends DomainResource {
   public static final String SP_REQUESTER = "requester";
   @SearchParamDefinition(name="identifier", path="CommunicationRequest.identifier", description="Unique identifier", type="token" )
   public static final String SP_IDENTIFIER = "identifier";
-  @SearchParamDefinition(name = "ordered", path = "CommunicationRequest.orderedOn", description = "When ordered or proposed", type = "date")
+  @SearchParamDefinition(name="ordered", path="CommunicationRequest.orderedOn", description="When ordered or proposed", type="date" )
   public static final String SP_ORDERED = "ordered";
-  @SearchParamDefinition(name = "subject", path = "CommunicationRequest.subject", description = "Focus of message", type = "reference")
+  @SearchParamDefinition(name="subject", path="CommunicationRequest.subject", description="Focus of message", type="reference" )
   public static final String SP_SUBJECT = "subject";
   @SearchParamDefinition(name="medium", path="CommunicationRequest.medium", description="Communication medium", type="token" )
   public static final String SP_MEDIUM = "medium";
-  @SearchParamDefinition(name = "encounter", path = "CommunicationRequest.encounter", description = "Encounter leading to message", type = "reference")
+  @SearchParamDefinition(name="encounter", path="CommunicationRequest.encounter", description="Encounter leading to message", type="reference" )
   public static final String SP_ENCOUNTER = "encounter";
-  @SearchParamDefinition(name = "priority", path = "CommunicationRequest.priority", description = "Message urgency", type = "token")
+  @SearchParamDefinition(name="priority", path="CommunicationRequest.priority", description="Message urgency", type="token" )
   public static final String SP_PRIORITY = "priority";
-  @SearchParamDefinition(name = "sender", path = "CommunicationRequest.sender", description = "Message sender", type = "reference")
+  @SearchParamDefinition(name="sender", path="CommunicationRequest.sender", description="Message sender", type="reference" )
   public static final String SP_SENDER = "sender";
-  @SearchParamDefinition(name = "patient", path = "CommunicationRequest.subject", description = "Focus of message", type = "reference")
+  @SearchParamDefinition(name="patient", path="CommunicationRequest.subject", description="Focus of message", type="reference" )
   public static final String SP_PATIENT = "patient";
   @SearchParamDefinition(name="recipient", path="CommunicationRequest.recipient", description="Message recipient", type="reference" )
   public static final String SP_RECIPIENT = "recipient";
-  @SearchParamDefinition(name = "time", path = "CommunicationRequest.scheduledTime", description = "When scheduled", type = "date")
+  @SearchParamDefinition(name="time", path="CommunicationRequest.scheduledTime", description="When scheduled", type="date" )
   public static final String SP_TIME = "time";
-  @SearchParamDefinition(name = "category", path = "CommunicationRequest.category", description = "Message category", type = "token")
+  @SearchParamDefinition(name="category", path="CommunicationRequest.category", description="Message category", type="token" )
   public static final String SP_CATEGORY = "category";
-  @SearchParamDefinition(name = "status", path = "CommunicationRequest.status", description = "proposed | planned | requested | received | accepted | in-progress | completed | suspended | rejected | failed", type = "token")
+  @SearchParamDefinition(name="status", path="CommunicationRequest.status", description="proposed | planned | requested | received | accepted | in-progress | completed | suspended | rejected | failed", type="token" )
   public static final String SP_STATUS = "status";
 
 }

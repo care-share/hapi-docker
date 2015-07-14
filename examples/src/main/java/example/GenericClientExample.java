@@ -3,17 +3,22 @@ package example;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hl7.fhir.instance.model.api.IBaseResource;
+
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.api.IResource;
-import ca.uhn.fhir.model.base.resource.BaseConformance;
 import ca.uhn.fhir.model.base.resource.BaseOperationOutcome;
+import ca.uhn.fhir.model.dstu2.resource.Bundle;
+import ca.uhn.fhir.model.dstu2.resource.Conformance;
 import ca.uhn.fhir.model.dstu2.resource.Observation;
 import ca.uhn.fhir.model.dstu2.resource.OperationOutcome;
+import ca.uhn.fhir.model.dstu2.resource.OperationOutcome.Issue;
 import ca.uhn.fhir.model.dstu2.resource.Organization;
 import ca.uhn.fhir.model.dstu2.resource.Parameters;
 import ca.uhn.fhir.model.dstu2.resource.Patient;
+import ca.uhn.fhir.model.dstu2.resource.Provenance;
 import ca.uhn.fhir.model.dstu2.valueset.AdministrativeGenderEnum;
+import ca.uhn.fhir.model.dstu2.valueset.IssueSeverityEnum;
 import ca.uhn.fhir.model.primitive.DateDt;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.model.primitive.InstantDt;
@@ -21,6 +26,7 @@ import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.method.SearchStyleEnum;
+import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.server.exceptions.PreconditionFailedException;
 
 public class GenericClientExample {
@@ -34,7 +40,7 @@ public class GenericClientExample {
       IGenericClient client = ctx.newRestfulGenericClient(serverBase);
 
       // Perform a search
-      Bundle results = client
+      ca.uhn.fhir.model.api.Bundle results = client
             .search()
             .forResource(Patient.class)
             .where(Patient.FAMILY.matches().value("duck"))
@@ -46,7 +52,7 @@ public class GenericClientExample {
 
    @SuppressWarnings("unused")
    public static void fluentSearch() {
-      FhirContext ctx = new FhirContext();
+      FhirContext ctx = FhirContext.forDstu2();
       IGenericClient client = ctx.newRestfulGenericClient("http://fhir.healthintersections.com.au/open");
       {
          // START SNIPPET: create
@@ -69,7 +75,7 @@ public class GenericClientExample {
          // resource, the OperationOutcome response, etc. (assuming that
          // any of these things were provided by the server! They may not
          // always be)
-         IdDt id = outcome.getId();
+         IdDt id = (IdDt) outcome.getId();
          System.out.println("Got ID: " + id.getValue());
          // END SNIPPET: create
       }
@@ -94,9 +100,32 @@ public class GenericClientExample {
           Boolean created = outcome.getCreated();
 
           // The ID of the created, or the pre-existing resource
-          IdDt id = outcome.getId();
+          IdDt id = (IdDt) outcome.getId();
           // END SNIPPET: createConditional
       }
+      {
+         // START SNIPPET: validate
+         Patient patient = new Patient();
+         patient.addIdentifier().setSystem("http://hospital.com").setValue("123445");
+         patient.addName().addFamily("Smith").addGiven("John");
+         
+         // Validate the resource
+         MethodOutcome outcome = client.validate()
+            .resource(patient)
+            .execute();
+         
+         // The returned object will contain an operation outcome resource
+         OperationOutcome oo = (OperationOutcome) outcome.getOperationOutcome();
+         
+         // If the OperationOutcome has any issues with a severity of ERROR or SEVERE,
+         // the validation failed.
+         for (Issue nextIssue : oo.getIssue()) {
+            if (nextIssue.getSeverityElement().getValueAsEnum().ordinal() >= IssueSeverityEnum.ERROR.ordinal()) {
+               System.out.println("We failed validation!");
+            }
+         }
+         // END SNIPPET: validate
+     }
        {
          // START SNIPPET: update
          Patient patient = new Patient();
@@ -120,7 +149,7 @@ public class GenericClientExample {
          // resource, the OperationOutcome response, etc. (assuming that
          // any of these things were provided by the server! They may not
          // always be)
-         IdDt id = outcome.getId();
+         IdDt id = (IdDt) outcome.getId();
          System.out.println("Got ID: " + id.getValue());
          // END SNIPPET: update
       }
@@ -170,7 +199,7 @@ public class GenericClientExample {
          // START SNIPPET: conformance
          // Retrieve the server's conformance statement and print its
          // description
-         BaseConformance conf = client.conformance();
+         Conformance conf = client.fetchConformance().ofType(Conformance.class).execute();
          System.out.println(conf.getDescriptionElement().getValue());
          // END SNIPPET: conformance
       }
@@ -203,6 +232,7 @@ public class GenericClientExample {
                .forResource(Patient.class)
                .where(Patient.BIRTHDATE.beforeOrEquals().day("2011-01-01"))
                .and(Patient.CAREPROVIDER.hasChainedProperty(Organization.NAME.matches().value("Health")))
+               .returnBundle(ca.uhn.fhir.model.dstu2.resource.Bundle.class)
                .execute();
          // END SNIPPET: search
 
@@ -210,6 +240,7 @@ public class GenericClientExample {
          response = client.search()
                .forResource(Patient.class)
                .where(Patient.FAMILY.matches().values("Smith", "Smyth"))
+               .returnBundle(Bundle.class)
                .execute();
          // END SNIPPET: searchOr
 
@@ -219,6 +250,7 @@ public class GenericClientExample {
                .where(Patient.ADDRESS.matches().values("Toronto"))
                .and(Patient.ADDRESS.matches().values("Ontario"))
                .and(Patient.ADDRESS.matches().values("Canada"))
+               .returnBundle(Bundle.class)
                .execute();
          // END SNIPPET: searchAnd
 
@@ -227,6 +259,7 @@ public class GenericClientExample {
                .forResource(Patient.class)
                .withIdAndCompartment("123", "condition")
                .where(Patient.ADDRESS.matches().values("Toronto"))
+               .returnBundle(Bundle.class)
                .execute();
          // END SNIPPET: searchCompartment
 
@@ -237,8 +270,11 @@ public class GenericClientExample {
                .where(Patient.BIRTHDATE.beforeOrEquals().day("2012-01-22"))
                .and(Patient.BIRTHDATE.after().day("2011-01-01"))
                .include(Patient.INCLUDE_ORGANIZATION)
+               .revInclude(Provenance.INCLUDE_TARGET)
+               .lastUpdated(new DateRangeParam("2011-01-01", null))
                .sort().ascending(Patient.BIRTHDATE)
                .sort().descending(Patient.NAME).limitTo(123)
+               .returnBundle(Bundle.class)
                .execute();
          // END SNIPPET: searchAdv
 
@@ -247,6 +283,7 @@ public class GenericClientExample {
                .forResource("Patient")
                .where(Patient.NAME.matches().value("Tester"))
                .usingStyle(SearchStyleEnum.POST)
+               .returnBundle(Bundle.class)
                .execute();
          // END SNIPPET: searchPost
 
@@ -256,16 +293,9 @@ public class GenericClientExample {
                .where(Observation.CODE_VALUE_DATE
                      .withLeft(Observation.CODE.exactly().code("FOO$BAR"))
                      .withRight(Observation.VALUE_DATE.exactly().day("2001-01-01")))
+               .returnBundle(Bundle.class)
                .execute();
          // END SNIPPET: searchComposite
-
-         // START SNIPPET: searchPaging
-         if (response.getLinkNext().isEmpty() == false) {
-
-            // load next page
-            Bundle nextPage = client.loadPage().next(response).execute();
-         }
-         // END SNIPPET: searchPaging
       }
       {
          // START SNIPPET: transaction
@@ -273,7 +303,7 @@ public class GenericClientExample {
          // .. populate this list - note that you can also pass in a populated
          // Bundle if you want to create one manually ..
 
-         List<IResource> response = client.transaction().withResources(resources).execute();
+         List<IBaseResource> response = client.transaction().withResources(resources).execute();
          // END SNIPPET: transaction
       }
 
@@ -328,7 +358,7 @@ public class GenericClientExample {
    public static void history() {
       IGenericClient client = FhirContext.forDstu2().newRestfulGenericClient("");
       {
-         Bundle response;
+         ca.uhn.fhir.model.api.Bundle response;
          // START SNIPPET: historyDstu1
          response = client
             .history()
@@ -362,8 +392,30 @@ public class GenericClientExample {
    }
    
    public static void main(String[] args) {
-      operation();
+      paging();
    }
+   private static void paging() {
+      {
+         // START SNIPPET: searchPaging
+         FhirContext ctx = FhirContext.forDstu2();
+         IGenericClient client = ctx.newRestfulGenericClient("http://fhirtest.uhn.ca/baseDstu2");
+         
+         // Perform a search
+         Bundle results = client.search()
+               .forResource(Patient.class)
+               .where(Patient.NAME.matches().value("Smith"))
+               .returnBundle(Bundle.class)
+               .execute();
+         
+         if (results.getLink(Bundle.LINK_NEXT) != null) {
+
+            // load next page
+            Bundle nextPage = client.loadPage().next(results).execute();
+         }
+         // END SNIPPET: searchPaging
+      }
+   }
+
    @SuppressWarnings("unused")
    private static void operationHttpGet() {
       // START SNIPPET: operationHttpGet
@@ -408,6 +460,17 @@ public class GenericClientExample {
          .named("$everything")
          .withParameters(inParams)
          .execute();
+      
+      /*
+       * Note that the $everything operation returns a Bundle instead 
+       * of a Parameters resource. The client operation methods return a
+       * Parameters instance however, so HAPI creates a Parameters object
+       * with a single parameter containing the value.
+       */
+      Bundle responseBundle = (Bundle) outParams.getParameter().get(0).getResource();
+      
+      // Print the response bundle
+      System.out.println(ctx.newXmlParser().setPrettyPrint(true).encodeResourceToString(responseBundle));
       // END SNIPPET: operation
    }
 

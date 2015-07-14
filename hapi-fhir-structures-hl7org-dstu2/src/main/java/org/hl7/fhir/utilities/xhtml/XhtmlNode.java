@@ -28,13 +28,39 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 package org.hl7.fhir.utilities.xhtml;
 
+/*
+ * #%L
+ * HAPI FHIR Structures - HL7.org DSTU2
+ * %%
+ * Copyright (C) 2014 - 2015 University Health Network
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-//@DatatypeDef()
-public class XhtmlNode {
+import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.instance.model.annotations.DatatypeDef;
+import org.hl7.fhir.instance.model.api.IBaseXhtml;
+import org.hl7.fhir.instance.model.api.IPrimitiveType;
+
+@DatatypeDef(name="xhtml")
+public class XhtmlNode implements IBaseXhtml {
 
   public static final String NBSP = Character.toString((char)0xa0);
   
@@ -80,6 +106,9 @@ public class XhtmlNode {
   }
 
   public List<XhtmlNode> getChildNodes() {
+	  if (childNodes == null) {
+		  childNodes = new ArrayList<XhtmlNode>();
+	  }
     return childNodes;
   }
 
@@ -280,7 +309,64 @@ public class XhtmlNode {
 		return e1.equalsDeep(e2);
   }
 
-	public String getValueAsString() throws Exception {
-		return new XhtmlComposer().compose(this);
+	public String getValueAsString() {
+		if (isEmpty()) {
+			return null;
+		}
+		try {
+			return new XhtmlComposer().compose(this);
+		} catch (Exception e) {
+			// TODO: composer shouldn't throw exception like this
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public void setValueAsString(String theValue) throws IllegalArgumentException {
+		this.Attributes = null;
+		this.childNodes = null;
+		this.content = null;
+		this.name = null;
+		this.nodeType= null;
+		if (theValue == null) {
+			return;
+		}
+		
+		String val = theValue.trim();
+		if (StringUtils.isBlank(theValue)) {
+			return;
+		}
+		
+		if (!val.startsWith("<")) {
+			val = "<div>" + val + "</div>";
+		}
+		if (val.startsWith("<?") && val.endsWith("?>")) {
+			return;
+		}
+
+		try {
+			// TODO: this is ugly
+			XhtmlNode fragment = new XhtmlParser().parseFragment(val);
+			this.Attributes = fragment.Attributes;
+			this.childNodes = fragment.childNodes;
+			this.content = fragment.content;
+			this.name = fragment.name;
+			this.nodeType= fragment.nodeType;
+		} catch (Exception e) {
+			// TODO: composer shouldn't throw exception like this
+			throw new RuntimeException(e);
+		}
+		
+	}
+
+	@Override
+	public String getValue() {
+		return getValueAsString();
+	}
+
+	@Override
+	public IPrimitiveType<String> setValue(String theValue) throws IllegalArgumentException {
+		setValueAsString(theValue);
+		return this;
 	}
 }

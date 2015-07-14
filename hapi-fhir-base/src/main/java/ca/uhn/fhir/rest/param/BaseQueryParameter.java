@@ -28,12 +28,12 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.hl7.fhir.instance.model.IBaseResource;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.method.BaseMethodBinding;
 import ca.uhn.fhir.rest.method.IParameter;
 import ca.uhn.fhir.rest.method.QualifiedParamList;
-import ca.uhn.fhir.rest.method.Request;
 import ca.uhn.fhir.rest.method.RequestDetails;
 import ca.uhn.fhir.rest.method.RestSearchParameterTypeEnum;
 import ca.uhn.fhir.rest.method.SearchMethodBinding;
@@ -129,7 +129,7 @@ public abstract class BaseQueryParameter implements IParameter {
 	}
 
 	@Override
-	public Object translateQueryParametersIntoServerArgument(Request theRequest, Object theRequestContents) throws InternalErrorException, InvalidRequestException {
+	public Object translateQueryParametersIntoServerArgument(RequestDetails theRequest, byte[] theRequestContents, BaseMethodBinding<?> theMethodBinding) throws InternalErrorException, InvalidRequestException {
 
 		List<QualifiedParamList> paramList = new ArrayList<QualifiedParamList>();
 		String name = getName();
@@ -144,7 +144,7 @@ public abstract class BaseQueryParameter implements IParameter {
 
 		if (paramList.isEmpty()) {
 
-			ourLog.debug("No value for parameter '{}' - Qualified names {} and qualifier whitelist {}", getName(), qualified, getQualifierWhitelist());
+			ourLog.debug("No value for parameter '{}' - Qualified names {} and qualifier whitelist {}", new Object[] { getName(), qualified, getQualifierWhitelist() } );
 
 			if (handlesMissing()) {
 				return parse(theRequest.getServer().getFhirContext(), paramList);

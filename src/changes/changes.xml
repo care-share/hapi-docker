@@ -6,7 +6,155 @@
 		<title>HAPI FHIR Changelog</title>
 	</properties>
 	<body>
-		<release version="1.0" date="TBA">
+		<release version="1.1" date="TBD">
+			<action type="add">
+				Add support for reference implementation structures.
+			</action>
+			<action type="fix">
+				Parsers did not encode the resource meta element if the resource 
+				had tags but no other meta elements. Thanks to Bill de Beaubien and
+				Claude Nanjo for finding this.
+			</action>
+			<action type="fix" issue="164">
+				Correct performance issue with :missing=true search requests where the parameter is a resource link. Thanks to wanghaisheng for all his help in testing this.
+			</action>
+			<action type="fix" issue="149">
+				The self link in the Bundle returned by searches on the server does not respect the
+				server's address strategy (which resulted in an internal IP being shown on fhirtest.uhn.ca)
+			</action>
+			<action type="add">
+				Introduce ResponseHighlighterInterceptor, which provides syntax highlighting on RESTful server responses
+				if the server detects that the request is coming from a browser. This interceptor has been added
+				to fhirtest.uhn.ca responses.
+			</action>
+			<action type="fix">
+				Performing a create operation in a client used an incorrect URL if the
+				resource had an ID set. ID should be ignored for creates. Thanks to 
+				Peter Girard for reporting!
+			</action>
+			<action type="add" issue="170">
+				Add better addXXX() methods to structures, which take the datatype being added as a parameter. Thanks to Claude Nanjo for the
+				suggestion!
+			</action>
+			<action type="add" issue="152">
+				Add a new parser validation mechanism (see the 
+				<![CDATA[<a href="./doc_validation.html">validation page</a>]]> for info) which can be 
+				used to validate resources as they are being parsed, and optionally fail if invalid/unexpected
+				elements are found in resource bodies during parsing. 
+			</action>
+			<action type="fix">
+				IParser#parseResource(Class, String) method, which is used to parse a resource into the given
+				structure will now throw a DataFormatException if the structure is for the wrong type of
+				resource for the one actually found in the input String (or Reader). For example, if a Patient
+				resource is being parsed into Organization.class this will now cause an error. Previously,
+				the XML parser would ignore the type and the JSON parser would fail. This also caused 
+				operations to not parse correctly if they returned a resource type other than
+				parameters with JSON encoding (e.g. the $everything operation on UHN's test server).
+				Thanks to Avinash Shanbhag for reporting!
+			</action>
+			<action type="add">
+				Web tester UI now supports _revinclude
+			</action>
+			<action type="fix" issue="178">
+				Support link elements in Bundle.entry when parsing in DSTU2 mode
+				using the old (non-resource) Bundle class. Thanks to GitHub user
+				@joedai for reporting!
+			</action>
+			<action type="add">
+				LoggingInterceptor for server now supports logging DSTU2 extended operations by name
+			</action>
+			<action type="fix">
+				Woodstox XML parser has a default setting to limit the maximum
+				length of an attribute to 512kb. This caused issues handling
+				large attachments, so this setting has been increased to 100Mb.
+				Thanks to Nikos Kyriakoulakos for reporting!
+			</action>
+			<action type="fix" issue="175">
+				Some HTML entities were not correctly converted during parsing. Thanks to
+				Nick Kitto for reporting!
+			</action>
+			<action type="fix">
+				In the JPA Server:
+				Transactions creating resources with temporary/placeholder resource IDs
+				and other resources with references to those placeholder IDs previously
+				did not work if the reference did not contain the resource type
+				(e.g. Patient/urn:oid:0.1.2.3 instead of urn:oid:0.1.2.3). The
+				latter is actually the correct way of specifying a reference to a
+				placeholder, but the former was the only way that worked. Both forms
+				now work, in order to be lenient. Thanks to Bill De Beaubien for
+				reporting!
+			</action>
+			<action type="fix">
+				When parsing Bundles, if Bundle.entry.base is set to "cid:" (for DSTU1) 
+				or "urn:uuid:" / "urn:oid:" (for DSTU2) this is now correctly passed as
+				the base in resource.getId(). Conversely, when
+				encoding bundles, if a resource ID has a base defined,
+				and Bundle.entry.base is empty, it will now be
+				automatically set by the parser.
+			</action>
+			<action type="add" issue="179">
+				Add fluent client method for validate operation, and support the
+				new DSTU2 style extended operation for $validate if the client is
+				in DSTU2 mode. Thanks to Eric from the FHIR Skype Implementers chat for
+				reporting.
+			</action>
+			<action type="add">
+				Server now supports complete Accept header content negotiation, including
+				q values specifying order of preference. Previously the q value was ignored.
+			</action>
+			<action type="add">
+				Server in DSTU2 mode now indicates that whether it has support for Transaction operation or not. Thanks to Kevin Paschke for pointing out that this wasn't working!
+			</action>
+			<action type="add" issue="166">
+				Questionnaire.title now gets correctly indexed in JPA server (it has no path, so it is a special case)
+			</action>
+			<action type="add">
+				JPA server now supports ifNoneMatch in GET within a transaction request.
+			</action>
+			<action type="add">
+				DateRangeParam now supports null values in the constructor for lower or upper bounds (but 
+				still not both)
+			</action>
+			<action type="add">
+				Generic/fluent client and JPA server now both support _lastUpdated search parameter
+				which was added in DSTU2
+			</action>
+			<action name="fix" issue="188">
+				JPA server now supports sorting on reference parameters. Thanks to
+				Vishal Kachroo for reporting that this wasn't working!
+			</action>
+			<action type="fix">
+				Prevent Last-Updated header in responses coming back to the client from
+				overwriting the 'lastUpdated' value in the meta element in DSTU2
+				resources. This is important because 'lastUpdated' can have more
+				precision than the equivalent header, but the client previously
+				gave the header priority.
+			</action>
+			<action type="fix">
+				JPA server supports _count parameter in transaction containing search URL (nested search)
+			</action>
+			<action type="fix">
+				DSTU2 servers now indicate support for conditional create/update/delete in their
+				conformance statement.
+			</action>
+			<action type="fix">
+				Support for the Prefer header has been added to the server, client, and
+				JPA modules.
+			</action>
+			<action type="fix" issue="196">
+				JPA server failed to search for deep chained parameters across multiple references,
+				e.g. "Location.partof.partof.organization". Thanks to Ismael Sarmento Jr for
+				reporting!
+			</action>
+			<action type="fix">
+				Prevent crash when encoding resources with contained resources 
+				if the contained resources contained a circular reference to each other
+			</action>
+			<action type="add">
+				Add $meta, $meta-add, and $meta-delete operations to generic client
+			</action>
+		</release>
+		<release version="1.0" date="2015-May-8">
 			<action type="add">
 				Bump the version of a few dependencies to the
 				latest versions:
@@ -130,6 +278,12 @@
 				JPA server failed to index resources containing ContactPointDt elements with
 				populated values (e.g. Patient.telecom). Thanks to Mohammad Jafari for reporting!
 			</action>
+			<action type="add">
+				Add a new configuration method on the parsers, 
+				<![CDATA[<code>setStripVersionsFromReferences(boolean)</code>]]> which
+				configures the parser to preserve versions in resource reference links when
+				encoding. By default, these are removed.
+			</action>
 			<action type="fix" issue="155" dev="wdebeau1">
 				Terser's IModelVisitor now supplies to the path to the element. This is
 				an API change, but I don't think there are many users of the IModelVisitor yet.
@@ -194,6 +348,17 @@
 			</action>
 			<action type="add" issue="164">
 				Add support for :missing qualifier in JPA server.
+			</action>
+			<action type="add">
+				Add a new configuration method on the parsers, 
+				<![CDATA[<code>setStripVersionsFromReferences(boolean)</code>]]> which
+				configures the parser to preserve versions in resource reference links when
+				encoding. By default, these are removed.
+			</action>
+			<action type="add" due-to="joel-costigliola" issue="171">
+				Add an exception for RESTful clients/servers to represent the
+				HTTP 403 Forbidden status code. Thanks to Joel Costigliola for
+				the patch!
 			</action>
 			<action type="fix">
 				Transaction server operations incorrectly used the "Accept" header instead of the "Content-Type" header to determine the
@@ -364,8 +529,8 @@
 				<![CDATA[<b>API CHANGE:</b>]]> The "FHIR structures" for DSTU1 (the classes which model the
 				resources and composite datatypes) have been moved out of the core JAR into their
 				own JAR, in order to allow support for DEV resources, and DSTU2 resources when thast
-				version is finalized. See
-				<![CDATA[<a href="./doc_upgrading.html">upgrading</a>]]> 
+				version is finalized. See the
+				<![CDATA[<a href="./doc_dstu2.html">DSTU2 page</a>]]> 
 				for more information.  
 			</action>
 			<action type="fix">

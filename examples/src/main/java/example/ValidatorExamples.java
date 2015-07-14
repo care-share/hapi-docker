@@ -2,23 +2,46 @@ package example;
 
 import java.io.File;
 import java.io.FileReader;
+import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.model.api.IResource;
+import ca.uhn.fhir.model.dstu2.resource.OperationOutcome;
 import ca.uhn.fhir.model.dstu2.resource.Patient;
 import ca.uhn.fhir.model.dstu2.valueset.ContactPointSystemEnum;
+import ca.uhn.fhir.parser.StrictErrorHandler;
+import ca.uhn.fhir.rest.client.IGenericClient;
+import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.validation.FhirValidator;
+import ca.uhn.fhir.validation.SingleValidationMessage;
 import ca.uhn.fhir.validation.ValidationResult;
 
 public class ValidatorExamples {
 
+   @SuppressWarnings("unused")
+   public void enableValidation() {
+      // START SNIPPET: enableValidation
+      FhirContext ctx = FhirContext.forDstu2();
+      
+      ctx.setParserErrorHandler(new StrictErrorHandler());
+      
+      // This client will have strict parser validation enabled
+      IGenericClient client = ctx.newRestfulGenericClient("http://fhirtest.uhn.ca/baseDstu2");
+      
+      // This server will have strict parser validation enabled
+      RestfulServer server = new RestfulServer();
+      server.setFhirContext(ctx);
+      
+      // END SNIPPET: enableValidation
+   }
+   
    public void validateResource() {
       // START SNIPPET: basicValidation
       // As always, you need a context
-      FhirContext ctx = new FhirContext();
+      FhirContext ctx = FhirContext.forDstu2();
 
       // Create and populate a new patient object
       Patient p = new Patient();
@@ -36,13 +59,22 @@ public class ValidatorExamples {
          
       } else {
          // We failed validation!
-
          System.out.println("Validation failed");
-
-         // The result contains an OperationOutcome outlining the failures
-         String results = ctx.newXmlParser().setPrettyPrint(true).encodeResourceToString(result.getOperationOutcome());
-         System.out.println(results);
       }
+      
+      // The result contains a list of "messages" 
+      List<SingleValidationMessage> messages = result.getMessages();
+      for (SingleValidationMessage next : messages) {
+         System.out.println("Message:");
+         System.out.println(" * Location: " + next.getLocationString());
+         System.out.println(" * Severity: " + next.getSeverity());
+         System.out.println(" * Message : " + next.getMessage());
+      }
+      
+      // You can also convert the results into an OperationOutcome resource
+      OperationOutcome oo = (OperationOutcome) result.toOperationOutcome();
+      String results = ctx.newXmlParser().setPrettyPrint(true).encodeResourceToString(oo);
+      System.out.println(results);
       // END SNIPPET: basicValidation
 
    }
@@ -54,7 +86,7 @@ public class ValidatorExamples {
 
    private static void validateFiles() throws Exception {
       // START SNIPPET: validateFiles
-      FhirContext ctx = new FhirContext();
+      FhirContext ctx = FhirContext.forDstu2();
 
       // Create a validator and configure it
       FhirValidator validator = ctx.newValidator();
@@ -69,7 +101,7 @@ public class ValidatorExamples {
          String nextFileContents = IOUtils.toString(new FileReader(nextFile));
 
          // Parse that string (this example assumes JSON encoding)
-         IResource resource = ctx.newJsonParser().parseResource(nextFileContents);
+         IBaseResource resource = ctx.newJsonParser().parseResource(nextFileContents);
 
          // Apply the validation. This will throw an exception on the first
          // validation failure

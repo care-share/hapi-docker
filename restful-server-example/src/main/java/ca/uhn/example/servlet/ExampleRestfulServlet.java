@@ -5,6 +5,7 @@ import java.util.List;
 
 import ca.uhn.example.provider.OrganizationResourceProvider;
 import ca.uhn.example.provider.PatientResourceProvider;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.narrative.DefaultThymeleafNarrativeGenerator;
 import ca.uhn.fhir.narrative.INarrativeGenerator;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -18,12 +19,18 @@ public class ExampleRestfulServlet extends RestfulServer {
 	private static final long serialVersionUID = 1L;
 
 	/**
+	 * Constructor
+	 */
+	public ExampleRestfulServlet() {
+		super(FhirContext.forDstu2()); // Support DSTU2
+	}
+	
+	/**
 	 * This method is called automatically when the
 	 * servlet is initializing.
 	 */
 	@Override
 	public void initialize() {
-		
 		/*
 		 * Two resource providers are defined. Each one handles a specific
 		 * type of resource.

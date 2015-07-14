@@ -29,25 +29,24 @@ package org.hl7.fhir.instance.model;
   
 */
 
-// Generated on Wed, Feb 18, 2015 12:09-0500 for FHIR v0.4.0
+// Generated on Wed, Jul 8, 2015 17:35-0400 for FHIR v0.5.0
 
 import java.util.*;
 
 import org.hl7.fhir.utilities.Utilities;
 import org.hl7.fhir.instance.model.annotations.ResourceDef;
 import org.hl7.fhir.instance.model.annotations.SearchParamDefinition;
-import org.hl7.fhir.instance.model.annotations.Block;
 import org.hl7.fhir.instance.model.annotations.Child;
 import org.hl7.fhir.instance.model.annotations.Description;
+import org.hl7.fhir.instance.model.annotations.Block;
+import org.hl7.fhir.instance.model.api.*;
 /**
- * Describes the event of a patient consuming or otherwise being administered a medication.  This may be as simple as swallowing a tablet or it may be a long running infusion.
-
-Related resources tie this event to the authorizing prescription, and the specific encounter between patient and health care practitioner.
+ * Describes the event of a patient consuming or otherwise being administered a medication.  This may be as simple as swallowing a tablet or it may be a long running infusion.Related resources tie this event to the authorizing prescription, and the specific encounter between patient and health care practitioner.
  */
 @ResourceDef(name="MedicationAdministration", profile="http://hl7.org/fhir/Profile/MedicationAdministration")
 public class MedicationAdministration extends DomainResource {
 
-    public enum MedicationAdminStatus {
+    public enum MedicationAdministrationStatus {
         /**
          * The administration has started but has not yet completed.
          */
@@ -72,7 +71,7 @@ public class MedicationAdministration extends DomainResource {
          * added to help the parsers
          */
         NULL;
-        public static MedicationAdminStatus fromCode(String codeString) throws Exception {
+        public static MedicationAdministrationStatus fromCode(String codeString) throws Exception {
             if (codeString == null || "".equals(codeString))
                 return null;
         if ("in-progress".equals(codeString))
@@ -85,7 +84,7 @@ public class MedicationAdministration extends DomainResource {
           return ENTEREDINERROR;
         if ("stopped".equals(codeString))
           return STOPPED;
-        throw new Exception("Unknown MedicationAdminStatus code '"+codeString+"'");
+        throw new Exception("Unknown MedicationAdministrationStatus code '"+codeString+"'");
         }
         public String toCode() {
           switch (this) {
@@ -99,11 +98,11 @@ public class MedicationAdministration extends DomainResource {
         }
         public String getSystem() {
           switch (this) {
-            case INPROGRESS: return "";
-            case ONHOLD: return "";
-            case COMPLETED: return "";
-            case ENTEREDINERROR: return "";
-            case STOPPED: return "";
+            case INPROGRESS: return "http://hl7.org/fhir/medication-admin-status";
+            case ONHOLD: return "http://hl7.org/fhir/medication-admin-status";
+            case COMPLETED: return "http://hl7.org/fhir/medication-admin-status";
+            case ENTEREDINERROR: return "http://hl7.org/fhir/medication-admin-status";
+            case STOPPED: return "http://hl7.org/fhir/medication-admin-status";
             default: return "?";
           }
         }
@@ -119,96 +118,97 @@ public class MedicationAdministration extends DomainResource {
         }
         public String getDisplay() {
           switch (this) {
-            case INPROGRESS: return "in-progress";
-            case ONHOLD: return "on-hold";
-            case COMPLETED: return "completed";
-            case ENTEREDINERROR: return "entered-in-error";
-            case STOPPED: return "stopped";
+            case INPROGRESS: return "In Progress";
+            case ONHOLD: return "On Hold";
+            case COMPLETED: return "Completed";
+            case ENTEREDINERROR: return "Entered In Error";
+            case STOPPED: return "Stopped";
             default: return "?";
           }
         }
     }
 
-  public static class MedicationAdminStatusEnumFactory implements EnumFactory<MedicationAdminStatus> {
-    public MedicationAdminStatus fromCode(String codeString) throws IllegalArgumentException {
+  public static class MedicationAdministrationStatusEnumFactory implements EnumFactory<MedicationAdministrationStatus> {
+    public MedicationAdministrationStatus fromCode(String codeString) throws IllegalArgumentException {
       if (codeString == null || "".equals(codeString))
             if (codeString == null || "".equals(codeString))
                 return null;
         if ("in-progress".equals(codeString))
-          return MedicationAdminStatus.INPROGRESS;
+          return MedicationAdministrationStatus.INPROGRESS;
         if ("on-hold".equals(codeString))
-          return MedicationAdminStatus.ONHOLD;
+          return MedicationAdministrationStatus.ONHOLD;
         if ("completed".equals(codeString))
-          return MedicationAdminStatus.COMPLETED;
+          return MedicationAdministrationStatus.COMPLETED;
         if ("entered-in-error".equals(codeString))
-          return MedicationAdminStatus.ENTEREDINERROR;
+          return MedicationAdministrationStatus.ENTEREDINERROR;
         if ("stopped".equals(codeString))
-          return MedicationAdminStatus.STOPPED;
-        throw new IllegalArgumentException("Unknown MedicationAdminStatus code '"+codeString+"'");
+          return MedicationAdministrationStatus.STOPPED;
+        throw new IllegalArgumentException("Unknown MedicationAdministrationStatus code '"+codeString+"'");
         }
-    public String toCode(MedicationAdminStatus code) {
-      if (code == MedicationAdminStatus.INPROGRESS)
+    public String toCode(MedicationAdministrationStatus code) {
+      if (code == MedicationAdministrationStatus.INPROGRESS)
         return "in-progress";
-      if (code == MedicationAdminStatus.ONHOLD)
+      if (code == MedicationAdministrationStatus.ONHOLD)
         return "on-hold";
-      if (code == MedicationAdminStatus.COMPLETED)
+      if (code == MedicationAdministrationStatus.COMPLETED)
         return "completed";
-      if (code == MedicationAdminStatus.ENTEREDINERROR)
+      if (code == MedicationAdministrationStatus.ENTEREDINERROR)
         return "entered-in-error";
-      if (code == MedicationAdminStatus.STOPPED)
+      if (code == MedicationAdministrationStatus.STOPPED)
         return "stopped";
       return "?";
       }
     }
 
     @Block()
-    public static class MedicationAdministrationDosageComponent extends BackboneElement {
+    public static class MedicationAdministrationDosageComponent extends BackboneElement implements IBaseBackboneElement {
         /**
          * Free text dosage instructions can be used for cases where the instructions are too complex to code. When coded instructions are present, the free text instructions may still be present for display to humans taking or administering the medication.
          */
-        @Child(name="text", type={StringType.class}, order=1, min=0, max=1)
+        @Child(name = "text", type = {StringType.class}, order=1, min=0, max=1)
         @Description(shortDefinition="Dosage Instructions", formalDefinition="Free text dosage instructions can be used for cases where the instructions are too complex to code. When coded instructions are present, the free text instructions may still be present for display to humans taking or administering the medication." )
         protected StringType text;
 
         /**
          * A coded specification of the anatomic site where the medication first entered the body.  E.g. "left arm".
          */
-        @Child(name="site", type={CodeableConcept.class}, order=2, min=0, max=1)
+        @Child(name = "site", type = {CodeableConcept.class}, order=2, min=0, max=1)
         @Description(shortDefinition="Body site administered to", formalDefinition="A coded specification of the anatomic site where the medication first entered the body.  E.g. 'left arm'." )
         protected CodeableConcept site;
 
         /**
          * A code specifying the route or physiological path of administration of a therapeutic agent into or onto the patient.   E.g. topical, intravenous, etc.
          */
-        @Child(name="route", type={CodeableConcept.class}, order=3, min=0, max=1)
+        @Child(name = "route", type = {CodeableConcept.class}, order=3, min=0, max=1)
         @Description(shortDefinition="Path of substance into body", formalDefinition="A code specifying the route or physiological path of administration of a therapeutic agent into or onto the patient.   E.g. topical, intravenous, etc." )
         protected CodeableConcept route;
 
         /**
-         * A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.
-
-Terminologies used often pre-coordinate this term with the route and or form of administration.
+         * A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.Terminologies used often pre-coordinate this term with the route and or form of administration.
          */
-        @Child(name="method", type={CodeableConcept.class}, order=4, min=0, max=1)
+        @Child(name = "method", type = {CodeableConcept.class}, order=4, min=0, max=1)
         @Description(shortDefinition="How drug was administered", formalDefinition="A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.\r\rTerminologies used often pre-coordinate this term with the route and or form of administration." )
         protected CodeableConcept method;
 
         /**
          * The amount of the medication given at one administration event.   Use this value when the administration is essentially an instantaneous event such as a swallowing a tablet or giving an injection.
          */
-        @Child(name="quantity", type={Quantity.class}, order=5, min=0, max=1)
+        @Child(name = "quantity", type = {Quantity.class}, order=5, min=0, max=1)
         @Description(shortDefinition="Amount administered in one dose", formalDefinition="The amount of the medication given at one administration event.   Use this value when the administration is essentially an instantaneous event such as a swallowing a tablet or giving an injection." )
         protected Quantity quantity;
 
         /**
-         * Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.
+         * Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also be expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.
          */
-        @Child(name="rate", type={Ratio.class}, order=6, min=0, max=1)
-        @Description(shortDefinition="Dose quantity per unit of time", formalDefinition="Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity." )
+        @Child(name = "rate", type = {Ratio.class}, order=6, min=0, max=1)
+        @Description(shortDefinition="Dose quantity per unit of time", formalDefinition="Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also be expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity." )
         protected Ratio rate;
 
         private static final long serialVersionUID = -358534919L;
 
+    /*
+     * Constructor
+     */
       public MedicationAdministrationDosageComponent() {
         super();
       }
@@ -311,9 +311,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
         }
 
         /**
-         * @return {@link #method} (A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.
-
-Terminologies used often pre-coordinate this term with the route and or form of administration.)
+         * @return {@link #method} (A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.Terminologies used often pre-coordinate this term with the route and or form of administration.)
          */
         public CodeableConcept getMethod() { 
           if (this.method == null)
@@ -329,9 +327,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
         }
 
         /**
-         * @param value {@link #method} (A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.
-
-Terminologies used often pre-coordinate this term with the route and or form of administration.)
+         * @param value {@link #method} (A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.Terminologies used often pre-coordinate this term with the route and or form of administration.)
          */
         public MedicationAdministrationDosageComponent setMethod(CodeableConcept value) { 
           this.method = value;
@@ -363,7 +359,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
         }
 
         /**
-         * @return {@link #rate} (Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.)
+         * @return {@link #rate} (Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also be expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.)
          */
         public Ratio getRate() { 
           if (this.rate == null)
@@ -379,7 +375,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
         }
 
         /**
-         * @param value {@link #rate} (Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.)
+         * @param value {@link #rate} (Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also be expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.)
          */
         public MedicationAdministrationDosageComponent setRate(Ratio value) { 
           this.rate = value;
@@ -393,7 +389,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
           childrenList.add(new Property("route", "CodeableConcept", "A code specifying the route or physiological path of administration of a therapeutic agent into or onto the patient.   E.g. topical, intravenous, etc.", 0, java.lang.Integer.MAX_VALUE, route));
           childrenList.add(new Property("method", "CodeableConcept", "A coded value indicating the method by which the medication was introduced into or onto the body. Most commonly used for injections.  Examples:  Slow Push; Deep IV.\r\rTerminologies used often pre-coordinate this term with the route and or form of administration.", 0, java.lang.Integer.MAX_VALUE, method));
           childrenList.add(new Property("quantity", "Quantity", "The amount of the medication given at one administration event.   Use this value when the administration is essentially an instantaneous event such as a swallowing a tablet or giving an injection.", 0, java.lang.Integer.MAX_VALUE, quantity));
-          childrenList.add(new Property("rate", "Ratio", "Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.", 0, java.lang.Integer.MAX_VALUE, rate));
+          childrenList.add(new Property("rate", "Ratio", "Identifies the speed with which the medication was introduced into the patient. Typically the rate for an infusion e.g. 200ml in 2 hours.  May also be expressed as a rate per unit of time such as 100ml per hour - the duration is then not specified, or is specified in the quantity.", 0, java.lang.Integer.MAX_VALUE, rate));
         }
 
       public MedicationAdministrationDosageComponent copy() {
@@ -441,21 +437,21 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * External identifier - FHIR will generate its own internal IDs (probably URLs) which do not need to be explicitly managed by the resource.  The identifier here is one that would be used by another non-FHIR system - for example an automated medication pump would provide a record each time it operated; an administration while the patient was off the ward might be made with a different system and entered after the event.  Particularly important if these records have to be updated.
      */
-    @Child(name = "identifier", type = {Identifier.class}, order = 0, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "identifier", type = {Identifier.class}, order=0, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="External identifier", formalDefinition="External identifier - FHIR will generate its own internal IDs (probably URLs) which do not need to be explicitly managed by the resource.  The identifier here is one that would be used by another non-FHIR system - for example an automated medication pump would provide a record each time it operated; an administration while the patient was off the ward might be made with a different system and entered after the event.  Particularly important if these records have to be updated." )
     protected List<Identifier> identifier;
 
     /**
      * Will generally be set to show that the administration has been completed.  For some long running administrations such as infusions it is possible for an administration to be started but not completed or it may be paused while some other process is under way.
      */
-    @Child(name = "status", type = {CodeType.class}, order = 1, min = 1, max = 1)
+    @Child(name = "status", type = {CodeType.class}, order=1, min=1, max=1)
     @Description(shortDefinition="in-progress | on-hold | completed | entered-in-error | stopped", formalDefinition="Will generally be set to show that the administration has been completed.  For some long running administrations such as infusions it is possible for an administration to be started but not completed or it may be paused while some other process is under way." )
-    protected Enumeration<MedicationAdminStatus> status;
+    protected Enumeration<MedicationAdministrationStatus> status;
 
     /**
      * The person or animal to whom the medication was given.
      */
-    @Child(name = "patient", type = {Patient.class}, order = 2, min = 1, max = 1)
+    @Child(name = "patient", type = {Patient.class}, order=2, min=1, max=1)
     @Description(shortDefinition="Who received medication?", formalDefinition="The person or animal to whom the medication was given." )
     protected Reference patient;
 
@@ -467,7 +463,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * The individual who was responsible for giving the medication to the patient.
      */
-    @Child(name = "practitioner", type = {Practitioner.class}, order = 3, min = 0, max = 1)
+    @Child(name = "practitioner", type = {Practitioner.class}, order=3, min=0, max=1)
     @Description(shortDefinition="Who administered substance?", formalDefinition="The individual who was responsible for giving the medication to the patient." )
     protected Reference practitioner;
 
@@ -479,7 +475,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * The visit or admission the or other contact between patient and health care provider the medication administration was performed as part of.
      */
-    @Child(name = "encounter", type = {Encounter.class}, order = 4, min = 0, max = 1)
+    @Child(name = "encounter", type = {Encounter.class}, order=4, min=0, max=1)
     @Description(shortDefinition="Encounter administered as part of", formalDefinition="The visit or admission the or other contact between patient and health care provider the medication administration was performed as part of." )
     protected Reference encounter;
 
@@ -491,7 +487,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * The original request, instruction or authority to perform the administration.
      */
-    @Child(name = "prescription", type = {MedicationPrescription.class}, order = 5, min = 0, max = 1)
+    @Child(name = "prescription", type = {MedicationPrescription.class}, order=5, min=0, max=1)
     @Description(shortDefinition="Order administration performed against", formalDefinition="The original request, instruction or authority to perform the administration." )
     protected Reference prescription;
 
@@ -503,47 +499,42 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * Set this to true if the record is saying that the medication was NOT administered.
      */
-    @Child(name = "wasNotGiven", type = {BooleanType.class}, order = 6, min = 0, max = 1)
+    @Child(name = "wasNotGiven", type = {BooleanType.class}, order=6, min=0, max=1)
     @Description(shortDefinition="True if medication not administered", formalDefinition="Set this to true if the record is saying that the medication was NOT administered." )
     protected BooleanType wasNotGiven;
 
     /**
      * A code indicating why the administration was not performed.
      */
-    @Child(name = "reasonNotGiven", type = {CodeableConcept.class}, order = 7, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "reasonNotGiven", type = {CodeableConcept.class}, order=7, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="Reason administration not performed", formalDefinition="A code indicating why the administration was not performed." )
     protected List<CodeableConcept> reasonNotGiven;
 
     /**
      * A code indicating why the medication was given.
      */
-    @Child(name = "reasonGiven", type = {CodeableConcept.class}, order = 8, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "reasonGiven", type = {CodeableConcept.class}, order=8, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="Reason administration performed", formalDefinition="A code indicating why the medication was given." )
     protected List<CodeableConcept> reasonGiven;
 
     /**
      * An interval of time during which the administration took place (or did not take place, when the 'notGiven' attribute is true).  For many administrations, such as swallowing a tablet the use of dateTime is more appropriate.
      */
-    @Child(name = "effectiveTime", type = {DateTimeType.class, Period.class}, order = 9, min = 1, max = 1)
+    @Child(name = "effectiveTime", type = {DateTimeType.class, Period.class}, order=9, min=1, max=1)
     @Description(shortDefinition="Start and end time of administration", formalDefinition="An interval of time during which the administration took place (or did not take place, when the 'notGiven' attribute is true).  For many administrations, such as swallowing a tablet the use of dateTime is more appropriate." )
     protected Type effectiveTime;
 
     /**
      * Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.
      */
-    @Child(name = "medication", type = {Medication.class}, order = 10, min = 0, max = 1)
+    @Child(name = "medication", type = {CodeableConcept.class, Medication.class}, order=10, min=1, max=1)
     @Description(shortDefinition="What was administered?", formalDefinition="Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications." )
-    protected Reference medication;
-
-    /**
-     * The actual object that is the target of the reference (Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.)
-     */
-    protected Medication medicationTarget;
+    protected Type medication;
 
     /**
      * The device used in administering the medication to the patient.  E.g. a particular infusion pump.
      */
-    @Child(name = "device", type = {Device.class}, order = 11, min = 0, max = Child.MAX_UNLIMITED)
+    @Child(name = "device", type = {Device.class}, order=11, min=0, max=Child.MAX_UNLIMITED)
     @Description(shortDefinition="Device used to administer", formalDefinition="The device used in administering the medication to the patient.  E.g. a particular infusion pump." )
     protected List<Reference> device;
     /**
@@ -555,28 +546,35 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * Extra information about the medication administration that is not conveyed by the other attributes.
      */
-    @Child(name = "note", type = {StringType.class}, order = 12, min = 0, max = 1)
+    @Child(name = "note", type = {StringType.class}, order=12, min=0, max=1)
     @Description(shortDefinition="Information about the administration", formalDefinition="Extra information about the medication administration that is not conveyed by the other attributes." )
     protected StringType note;
 
     /**
      * Indicates how the medication is/was used by the patient.
      */
-    @Child(name = "dosage", type = {}, order = 13, min = 0, max = 1)
+    @Child(name = "dosage", type = {}, order=13, min=0, max=1)
     @Description(shortDefinition="Details of how medication was taken", formalDefinition="Indicates how the medication is/was used by the patient." )
     protected MedicationAdministrationDosageComponent dosage;
 
-    private static final long serialVersionUID = 1898346148L;
+    private static final long serialVersionUID = 1854331183L;
 
+  /*
+   * Constructor
+   */
     public MedicationAdministration() {
       super();
     }
 
-    public MedicationAdministration(Enumeration<MedicationAdminStatus> status, Reference patient, Type effectiveTime) {
+  /*
+   * Constructor
+   */
+    public MedicationAdministration(Enumeration<MedicationAdministrationStatus> status, Reference patient, Type effectiveTime, Type medication) {
       super();
       this.status = status;
       this.patient = patient;
       this.effectiveTime = effectiveTime;
+      this.medication = medication;
     }
 
     /**
@@ -609,15 +607,25 @@ Terminologies used often pre-coordinate this term with the route and or form of 
       return t;
     }
 
+    // syntactic sugar
+    public MedicationAdministration addIdentifier(Identifier t) { //3
+      if (t == null)
+        return this;
+      if (this.identifier == null)
+        this.identifier = new ArrayList<Identifier>();
+      this.identifier.add(t);
+      return this;
+    }
+
     /**
      * @return {@link #status} (Will generally be set to show that the administration has been completed.  For some long running administrations such as infusions it is possible for an administration to be started but not completed or it may be paused while some other process is under way.). This is the underlying object with id, value and extensions. The accessor "getStatus" gives direct access to the value
      */
-    public Enumeration<MedicationAdminStatus> getStatusElement() { 
+    public Enumeration<MedicationAdministrationStatus> getStatusElement() { 
       if (this.status == null)
         if (Configuration.errorOnAutoCreate())
           throw new Error("Attempt to auto-create MedicationAdministration.status");
         else if (Configuration.doAutoCreate())
-          this.status = new Enumeration<MedicationAdminStatus>(new MedicationAdminStatusEnumFactory()); // bb
+          this.status = new Enumeration<MedicationAdministrationStatus>(new MedicationAdministrationStatusEnumFactory()); // bb
       return this.status;
     }
 
@@ -632,7 +640,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * @param value {@link #status} (Will generally be set to show that the administration has been completed.  For some long running administrations such as infusions it is possible for an administration to be started but not completed or it may be paused while some other process is under way.). This is the underlying object with id, value and extensions. The accessor "getStatus" gives direct access to the value
      */
-    public MedicationAdministration setStatusElement(Enumeration<MedicationAdminStatus> value) { 
+    public MedicationAdministration setStatusElement(Enumeration<MedicationAdministrationStatus> value) { 
       this.status = value;
       return this;
     }
@@ -640,16 +648,16 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * @return Will generally be set to show that the administration has been completed.  For some long running administrations such as infusions it is possible for an administration to be started but not completed or it may be paused while some other process is under way.
      */
-    public MedicationAdminStatus getStatus() { 
+    public MedicationAdministrationStatus getStatus() { 
       return this.status == null ? null : this.status.getValue();
     }
 
     /**
      * @param value Will generally be set to show that the administration has been completed.  For some long running administrations such as infusions it is possible for an administration to be started but not completed or it may be paused while some other process is under way.
      */
-    public MedicationAdministration setStatus(MedicationAdminStatus value) { 
+    public MedicationAdministration setStatus(MedicationAdministrationStatus value) { 
         if (this.status == null)
-          this.status = new Enumeration<MedicationAdminStatus>(new MedicationAdminStatusEnumFactory());
+          this.status = new Enumeration<MedicationAdministrationStatus>(new MedicationAdministrationStatusEnumFactory());
         this.status.setValue(value);
       return this;
     }
@@ -862,7 +870,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
      * @return Set this to true if the record is saying that the medication was NOT administered.
      */
     public boolean getWasNotGiven() { 
-      return this.wasNotGiven == null ? false : this.wasNotGiven.getValue();
+      return this.wasNotGiven == null || this.wasNotGiven.isEmpty() ? false : this.wasNotGiven.getValue();
     }
 
     /**
@@ -905,6 +913,16 @@ Terminologies used often pre-coordinate this term with the route and or form of 
       return t;
     }
 
+    // syntactic sugar
+    public MedicationAdministration addReasonNotGiven(CodeableConcept t) { //3
+      if (t == null)
+        return this;
+      if (this.reasonNotGiven == null)
+        this.reasonNotGiven = new ArrayList<CodeableConcept>();
+      this.reasonNotGiven.add(t);
+      return this;
+    }
+
     /**
      * @return {@link #reasonGiven} (A code indicating why the medication was given.)
      */
@@ -935,6 +953,16 @@ Terminologies used often pre-coordinate this term with the route and or form of 
       return t;
     }
 
+    // syntactic sugar
+    public MedicationAdministration addReasonGiven(CodeableConcept t) { //3
+      if (t == null)
+        return this;
+      if (this.reasonGiven == null)
+        this.reasonGiven = new ArrayList<CodeableConcept>();
+      this.reasonGiven.add(t);
+      return this;
+    }
+
     /**
      * @return {@link #effectiveTime} (An interval of time during which the administration took place (or did not take place, when the 'notGiven' attribute is true).  For many administrations, such as swallowing a tablet the use of dateTime is more appropriate.)
      */
@@ -951,6 +979,10 @@ Terminologies used often pre-coordinate this term with the route and or form of 
       return (DateTimeType) this.effectiveTime;
     }
 
+    public boolean hasEffectiveTimeDateTimeType() throws Exception { 
+      return this.effectiveTime instanceof DateTimeType;
+    }
+
     /**
      * @return {@link #effectiveTime} (An interval of time during which the administration took place (or did not take place, when the 'notGiven' attribute is true).  For many administrations, such as swallowing a tablet the use of dateTime is more appropriate.)
      */
@@ -958,6 +990,10 @@ Terminologies used often pre-coordinate this term with the route and or form of 
       if (!(this.effectiveTime instanceof Period))
         throw new Exception("Type mismatch: the type Period was expected, but "+this.effectiveTime.getClass().getName()+" was encountered");
       return (Period) this.effectiveTime;
+    }
+
+    public boolean hasEffectiveTimePeriod() throws Exception { 
+      return this.effectiveTime instanceof Period;
     }
 
     public boolean hasEffectiveTime() { 
@@ -975,13 +1011,34 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * @return {@link #medication} (Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.)
      */
-    public Reference getMedication() { 
-      if (this.medication == null)
-        if (Configuration.errorOnAutoCreate())
-          throw new Error("Attempt to auto-create MedicationAdministration.medication");
-        else if (Configuration.doAutoCreate())
-          this.medication = new Reference(); // cc
+    public Type getMedication() { 
       return this.medication;
+    }
+
+    /**
+     * @return {@link #medication} (Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.)
+     */
+    public CodeableConcept getMedicationCodeableConcept() throws Exception { 
+      if (!(this.medication instanceof CodeableConcept))
+        throw new Exception("Type mismatch: the type CodeableConcept was expected, but "+this.medication.getClass().getName()+" was encountered");
+      return (CodeableConcept) this.medication;
+    }
+
+    public boolean hasMedicationCodeableConcept() throws Exception { 
+      return this.medication instanceof CodeableConcept;
+    }
+
+    /**
+     * @return {@link #medication} (Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.)
+     */
+    public Reference getMedicationReference() throws Exception { 
+      if (!(this.medication instanceof Reference))
+        throw new Exception("Type mismatch: the type Reference was expected, but "+this.medication.getClass().getName()+" was encountered");
+      return (Reference) this.medication;
+    }
+
+    public boolean hasMedicationReference() throws Exception { 
+      return this.medication instanceof Reference;
     }
 
     public boolean hasMedication() { 
@@ -991,28 +1048,8 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     /**
      * @param value {@link #medication} (Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.)
      */
-    public MedicationAdministration setMedication(Reference value) { 
+    public MedicationAdministration setMedication(Type value) { 
       this.medication = value;
-      return this;
-    }
-
-    /**
-     * @return {@link #medication} The actual object that is the target of the reference. The reference library doesn't populate this, but you can use it to hold the resource if you resolve it. (Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.)
-     */
-    public Medication getMedicationTarget() { 
-      if (this.medicationTarget == null)
-        if (Configuration.errorOnAutoCreate())
-          throw new Error("Attempt to auto-create MedicationAdministration.medication");
-        else if (Configuration.doAutoCreate())
-          this.medicationTarget = new Medication(); // aa
-      return this.medicationTarget;
-    }
-
-    /**
-     * @param value {@link #medication} The actual object that is the target of the reference. The reference library doesn't use these, but you can use it to hold the resource if you resolve it. (Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.)
-     */
-    public MedicationAdministration setMedicationTarget(Medication value) { 
-      this.medicationTarget = value;
       return this;
     }
 
@@ -1044,6 +1081,16 @@ Terminologies used often pre-coordinate this term with the route and or form of 
         this.device = new ArrayList<Reference>();
       this.device.add(t);
       return t;
+    }
+
+    // syntactic sugar
+    public MedicationAdministration addDevice(Reference t) { //3
+      if (t == null)
+        return this;
+      if (this.device == null)
+        this.device = new ArrayList<Reference>();
+      this.device.add(t);
+      return this;
     }
 
     /**
@@ -1152,7 +1199,7 @@ Terminologies used often pre-coordinate this term with the route and or form of 
         childrenList.add(new Property("reasonNotGiven", "CodeableConcept", "A code indicating why the administration was not performed.", 0, java.lang.Integer.MAX_VALUE, reasonNotGiven));
         childrenList.add(new Property("reasonGiven", "CodeableConcept", "A code indicating why the medication was given.", 0, java.lang.Integer.MAX_VALUE, reasonGiven));
         childrenList.add(new Property("effectiveTime[x]", "dateTime|Period", "An interval of time during which the administration took place (or did not take place, when the 'notGiven' attribute is true).  For many administrations, such as swallowing a tablet the use of dateTime is more appropriate.", 0, java.lang.Integer.MAX_VALUE, effectiveTime));
-        childrenList.add(new Property("medication", "Reference(Medication)", "Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.", 0, java.lang.Integer.MAX_VALUE, medication));
+        childrenList.add(new Property("medication[x]", "CodeableConcept|Reference(Medication)", "Identifies the medication that was administered. This is either a link to a resource representing the details of the medication or a simple attribute carrying a code that identifies the medication from a known list of medications.", 0, java.lang.Integer.MAX_VALUE, medication));
         childrenList.add(new Property("device", "Reference(Device)", "The device used in administering the medication to the patient.  E.g. a particular infusion pump.", 0, java.lang.Integer.MAX_VALUE, device));
         childrenList.add(new Property("note", "string", "Extra information about the medication administration that is not conveyed by the other attributes.", 0, java.lang.Integer.MAX_VALUE, note));
         childrenList.add(new Property("dosage", "", "Indicates how the medication is/was used by the patient.", 0, java.lang.Integer.MAX_VALUE, dosage));
@@ -1240,24 +1287,26 @@ Terminologies used often pre-coordinate this term with the route and or form of 
     return ResourceType.MedicationAdministration;
    }
 
-    @SearchParamDefinition(name = "identifier", path = "MedicationAdministration.identifier", description = "Return administrations with this external identity", type = "token")
-    public static final String SP_IDENTIFIER = "identifier";
-    @SearchParamDefinition(name = "prescription", path = "MedicationAdministration.prescription", description = "The identity of a prescription to list administrations from", type = "reference")
-    public static final String SP_PRESCRIPTION = "prescription";
+  @SearchParamDefinition(name="identifier", path="MedicationAdministration.identifier", description="Return administrations with this external identity", type="token" )
+  public static final String SP_IDENTIFIER = "identifier";
+  @SearchParamDefinition(name="prescription", path="MedicationAdministration.prescription", description="The identity of a prescription to list administrations from", type="reference" )
+  public static final String SP_PRESCRIPTION = "prescription";
   @SearchParamDefinition(name="effectivetime", path="MedicationAdministration.effectiveTime[x]", description="Date administration happened (or did not happen)", type="date" )
   public static final String SP_EFFECTIVETIME = "effectivetime";
+  @SearchParamDefinition(name="practitioner", path="MedicationAdministration.practitioner", description="Who administered substance?", type="reference" )
+  public static final String SP_PRACTITIONER = "practitioner";
   @SearchParamDefinition(name="patient", path="MedicationAdministration.patient", description="The identity of a patient to list administrations  for", type="reference" )
   public static final String SP_PATIENT = "patient";
-    @SearchParamDefinition(name = "medication", path = "MedicationAdministration.medication", description = "Return administrations of this medication", type = "reference")
-    public static final String SP_MEDICATION = "medication";
-    @SearchParamDefinition(name = "encounter", path = "MedicationAdministration.encounter", description = "Return administrations that share this encounter", type = "reference")
-    public static final String SP_ENCOUNTER = "encounter";
+  @SearchParamDefinition(name="medication", path="MedicationAdministration.medicationReference", description="Return administrations of this medication", type="reference" )
+  public static final String SP_MEDICATION = "medication";
+  @SearchParamDefinition(name="encounter", path="MedicationAdministration.encounter", description="Return administrations that share this encounter", type="reference" )
+  public static final String SP_ENCOUNTER = "encounter";
   @SearchParamDefinition(name="device", path="MedicationAdministration.device", description="Return administrations with this administration device identity", type="reference" )
   public static final String SP_DEVICE = "device";
   @SearchParamDefinition(name="notgiven", path="MedicationAdministration.wasNotGiven", description="Administrations that were not made", type="token" )
   public static final String SP_NOTGIVEN = "notgiven";
-    @SearchParamDefinition(name = "status", path = "MedicationAdministration.status", description = "MedicationAdministration event status (for example one of active/paused/completed/nullified)", type = "token")
-    public static final String SP_STATUS = "status";
+  @SearchParamDefinition(name="status", path="MedicationAdministration.status", description="MedicationAdministration event status (for example one of active/paused/completed/nullified)", type="token" )
+  public static final String SP_STATUS = "status";
 
 }
 

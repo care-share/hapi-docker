@@ -32,16 +32,22 @@ public class Constants {
 	public static final Charset CHARSET_UTF8;
 	public static final String CHARSETNAME_UTF_8 = "UTF-8";
 	public static final String CT_ATOM_XML = "application/atom+xml";
-
 	public static final String CT_FHIR_JSON = "application/json+fhir";
+
+	public static final String CTSUFFIX_CHARSET_UTF8 = "; charset=" + CHARSETNAME_UTF_8;
 	public static final String CT_FHIR_XML = "application/xml+fhir";
 	public static final String CT_HTML = "text/html";
+	public static final String CT_HTML_WITH_UTF8 = "text/html" + CTSUFFIX_CHARSET_UTF8;
 	public static final String CT_JSON = "application/json";
 	public static final String CT_OCTET_STREAM = "application/octet-stream";
 	public static final String CT_TEXT = "text/plain";
-	public static final String CT_TEXT_WITH_UTF8 = CT_TEXT + "; charset=UTF-8";
+	public static final String CT_TEXT_WITH_UTF8 = CT_TEXT + CTSUFFIX_CHARSET_UTF8;
 	public static final String CT_XML = "application/xml";
 	public static final String ENCODING_GZIP = "gzip";
+	public static final String EXTOP_VALIDATE = "$validate";
+	public static final String EXTOP_VALIDATE_MODE = "mode";
+	public static final String EXTOP_VALIDATE_PROFILE = "profile";
+	public static final String EXTOP_VALIDATE_RESOURCE = "resource";
 	public static final String FORMAT_JSON = "json";
 	public static final Set<String> FORMAT_VAL_JSON;
 	public static final Map<String, EncodingEnum> FORMAT_VAL_TO_ENCODING;
@@ -90,13 +96,14 @@ public class Constants {
 	public static final String PARAM_FORMAT = "_format";
 	public static final String PARAM_HISTORY = "_history";
 	public static final String PARAM_INCLUDE = "_include";
-	public static final String PARAM_REVINCLUDE = "_revinclude";
+	public static final String PARAM_LASTUPDATED = "_lastUpdated";
 	public static final String PARAM_NARRATIVE = "_narrative";
 	public static final String PARAM_PAGINGACTION = "_getpages";
 	public static final String PARAM_PAGINGOFFSET = "_getpagesoffset";
 	public static final String PARAM_PRETTY = "_pretty";
 	public static final String PARAM_PRETTY_VALUE_TRUE = "true";
 	public static final String PARAM_QUERY = "_query";
+	public static final String PARAM_REVINCLUDE = "_revinclude";
 	public static final String PARAM_SEARCH = "_search";
 	public static final String PARAM_SINCE = "_since";
 	public static final String PARAM_SORT = "_sort";
@@ -105,6 +112,8 @@ public class Constants {
 	public static final String PARAM_TAGS = "_tags";
 	public static final String PARAM_VALIDATE = "_validate";
 	public static final String PARAMQUALIFIER_MISSING = ":missing";
+	public static final String PARAMQUALIFIER_MISSING_FALSE = "false";
+	public static final String PARAMQUALIFIER_MISSING_TRUE = "true";
 	public static final String PARAMQUALIFIER_STRING_EXACT = ":exact";
 	public static final String PARAMQUALIFIER_TOKEN_TEXT = ":text";
 	public static final int STATUS_HTTP_200_OK = 200;
@@ -124,8 +133,10 @@ public class Constants {
 	public static final int STATUS_HTTP_501_NOT_IMPLEMENTED = 501;
 	public static final String URL_TOKEN_HISTORY = "_history";
 	public static final String URL_TOKEN_METADATA = "metadata";
-	public static final String PARAMQUALIFIER_MISSING_TRUE = "true";
-	public static final String PARAMQUALIFIER_MISSING_FALSE = "false";
+	public static final String HEADER_PREFER = "Prefer";
+	public static final String HEADER_PREFER_RETURN = "return";
+	public static final String HEADER_PREFER_RETURN_MINIMAL = "minimal";
+	public static final String HEADER_PREFER_RETURN_REPRESENTATION = "representation";
 
 	static {
 		Map<String, EncodingEnum> valToEncoding = new HashMap<String, EncodingEnum>();

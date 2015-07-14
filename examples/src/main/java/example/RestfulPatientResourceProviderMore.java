@@ -59,6 +59,7 @@ import ca.uhn.fhir.rest.annotation.Validate;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.SortOrderEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
+import ca.uhn.fhir.rest.api.ValidationModeEnum;
 import ca.uhn.fhir.rest.client.api.IBasicClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.rest.param.CompositeParam;
@@ -71,6 +72,7 @@ import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
+import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.PreconditionFailedException;
@@ -758,6 +760,46 @@ public MethodOutcome updatePatientConditional(
 }
 //END SNIPPET: updateConditional
 
+//START SNIPPET: updatePrefer
+@Update
+public MethodOutcome updatePatientPrefer(
+    @ResourceParam Patient thePatient, 
+    @IdParam IdDt theId) {
+
+   // Save the patient to the database
+   
+   // Update the version and last updated time on the resource
+   IdDt updatedId = theId.withVersion("123");
+   thePatient.setId(updatedId);
+   InstantDt lastUpdated = InstantDt.withCurrentTime();
+   ResourceMetadataKeyEnum.UPDATED.put(thePatient, lastUpdated);
+   
+   // Add the resource to the outcome, so that it can be returned by the server
+   // if the client requests it
+   MethodOutcome outcome = new MethodOutcome();
+   outcome.setId(updatedId);
+   outcome.setResource(thePatient);
+   return outcome;
+}
+//END SNIPPET: updatePrefer
+
+//START SNIPPET: updateRaw
+@Update
+public MethodOutcome updatePatientWithRawValue (
+    @ResourceParam Patient thePatient, 
+    @IdParam IdDt theId, 
+    @ResourceParam String theRawBody,
+    @ResourceParam EncodingEnum theEncodingEnum) {
+
+   // Here, thePatient will have the parsed patient body, but
+   // theRawBody will also have the raw text of the resource 
+   // being created, and theEncodingEnum will tell you which
+   // encoding was used
+ 
+ return new MethodOutcome(); // populate this
+}
+//END SNIPPET: updateRaw
+
 //START SNIPPET: update
 @Update
 public MethodOutcome updatePatient(@IdParam IdDt theId, @ResourceParam Patient thePatient) {
@@ -818,7 +860,9 @@ public abstract MethodOutcome updateSomePatient(@IdParam IdDt theId, @ResourcePa
 
 //START SNIPPET: validate
 @Validate
-public MethodOutcome validatePatient(@ResourceParam Patient thePatient) {
+public MethodOutcome validatePatient(@ResourceParam Patient thePatient, 
+                                     @Validate.Mode ValidationModeEnum theMode,
+                                     @Validate.Profile String theProfile) {
 
   // Actually do our validation: The UnprocessableEntityException
   // results in an HTTP 422, which is appropriate for business rule failure
@@ -912,7 +956,7 @@ public interface HistoryClient extends IBasicClient {
 
 public void bbbbb() throws DataFormatException, IOException {
 //START SNIPPET: metadataClientUsage
-FhirContext ctx = new FhirContext();
+FhirContext ctx = FhirContext.forDstu2();
 MetadataClient client = ctx.newRestfulClient(MetadataClient.class, "http://spark.furore.com/fhir");
 Conformance metadata = client.getServerMetadata();
 System.out.println(ctx.newXmlParser().encodeResourceToString(metadata));
@@ -952,7 +996,7 @@ private interface IPatientClient extends IBasicClient
 
 public void clientRead() {
 //START SNIPPET: clientReadTags
-IPatientClient client = new FhirContext().newRestfulClient(IPatientClient.class, "http://foo/fhir");
+IPatientClient client = FhirContext.forDstu2().newRestfulClient(IPatientClient.class, "http://foo/fhir");
 Patient patient = client.readPatient(new IdDt("1234"));
   
 // Access the tag list

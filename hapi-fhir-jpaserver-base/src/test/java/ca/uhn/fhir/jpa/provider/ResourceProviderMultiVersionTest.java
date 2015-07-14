@@ -13,6 +13,7 @@ import org.junit.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.jpa.dao.BaseJpaTest;
 import ca.uhn.fhir.jpa.testutil.RandomServerPortProvider;
 import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.dstu.resource.Patient;
@@ -26,7 +27,7 @@ import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 
-public class ResourceProviderMultiVersionTest {
+public class ResourceProviderMultiVersionTest  extends BaseJpaTest {
 
 	private static ClassPathXmlApplicationContext ourAppCtx;
 	private static IGenericClient ourClientDstu2;
@@ -45,7 +46,7 @@ public class ResourceProviderMultiVersionTest {
 		p.addIdentifier("urn:MultiFhirVersionTest", "testSubmitPatient01");
 		p.addUndeclaredExtension(false, "http://foo#ext1", new StringDt("The value"));
 		p.getGender().setValueAsEnum(AdministrativeGenderCodesEnum.M);
-		IdDt id = ourClientDstu1.create().resource(p).execute().getId();
+		IdDt id = (IdDt) ourClientDstu1.create().resource(p).execute().getId();
 
 		// Read back as DSTU1
 		Patient patDstu1 = ourClientDstu1.read(Patient.class, id);
@@ -75,7 +76,7 @@ public class ResourceProviderMultiVersionTest {
 		p.addIdentifier().setSystem("urn:MultiFhirVersionTest").setValue("testSubmitPatientDstu201");
 		p.addUndeclaredExtension(false, "http://foo#ext1", new StringDt("The value"));
 		p.setGender(AdministrativeGenderEnum.MALE);
-		IdDt id = ourClientDstu2.create().resource(p).execute().getId();
+		IdDt id = (IdDt) ourClientDstu2.create().resource(p).execute().getId();
 
 		// Read back as DSTU1
 		Patient patDstu1 = ourClientDstu1.read(Patient.class, id);
@@ -99,15 +100,16 @@ public class ResourceProviderMultiVersionTest {
 
 	}
 
+	@SuppressWarnings("deprecation")
 	@Test
 	public void testUnknownResourceType() {
 		ca.uhn.fhir.model.dstu2.resource.Patient p = new ca.uhn.fhir.model.dstu2.resource.Patient();
 		p.addIdentifier().setSystem("urn:MultiFhirVersionTest").setValue("testUnknownResourceType01");
-		IdDt id = ourClientDstu2.create().resource(p).execute().getId();
+		IdDt id = (IdDt) ourClientDstu2.create().resource(p).execute().getId();
 
 		PaymentNotice s = new PaymentNotice();
 		s.addIdentifier().setSystem("urn:MultiFhirVersionTest").setValue("testUnknownResourceType02");
-		id = ourClientDstu2.create().resource(s).execute().getId();
+		ourClientDstu2.create().resource(s).execute().getId();
 
 		Bundle history = ourClientDstu2.history(null, id, null, null);
 		assertEquals(PaymentNotice.class, history.getEntries().get(0).getResource().getClass());
@@ -115,9 +117,19 @@ public class ResourceProviderMultiVersionTest {
 
 		history = ourClientDstu1.history(null, id, null, null);
 		assertEquals(ca.uhn.fhir.model.dstu.resource.Patient.class, history.getEntries().get(0).getResource().getClass());
+		
+		history = ourClientDstu2.history().onServer().andReturnDstu1Bundle().execute();
+		assertEquals(PaymentNotice.class, history.getEntries().get(0).getResource().getClass());
+		assertEquals(ca.uhn.fhir.model.dstu2.resource.Patient.class, history.getEntries().get(1).getResource().getClass());
+
+		history = ourClientDstu1.history().onServer().andReturnDstu1Bundle().execute();
+		assertEquals(ca.uhn.fhir.model.dstu.resource.Patient.class, history.getEntries().get(0).getResource().getClass());
+
+		history = ourClientDstu1.history().onInstance(id).andReturnDstu1Bundle().execute();
+		assertEquals(ca.uhn.fhir.model.dstu.resource.Patient.class, history.getEntries().get(0).getResource().getClass());
+
 	}
 
-	
 	@SuppressWarnings("unchecked")
 	@BeforeClass
 	public static void beforeClass() throws Exception {
@@ -139,8 +151,7 @@ public class ResourceProviderMultiVersionTest {
 		 * DEV resources
 		 */
 
-		RestfulServer restServerDstu2 = new RestfulServer();
-		restServerDstu2.setFhirContext(ourAppCtx.getBean("myFhirContextDstu2", FhirContext.class));
+		RestfulServer restServerDstu2 = new RestfulServer(ourAppCtx.getBean("myFhirContextDstu2", FhirContext.class));
 		List<IResourceProvider> rpsDstu2 = (List<IResourceProvider>) ourAppCtx.getBean("myResourceProvidersDstu2", List.class);
 		restServerDstu2.setResourceProviders(rpsDstu2);
 
@@ -155,8 +166,7 @@ public class ResourceProviderMultiVersionTest {
 		 * DSTU resources
 		 */
 
-		RestfulServer restServerDstu1 = new RestfulServer();
-		restServerDstu1.setFhirContext(ourAppCtx.getBean("myFhirContextDstu1", FhirContext.class));
+		RestfulServer restServerDstu1 = new RestfulServer(ourAppCtx.getBean("myFhirContextDstu1", FhirContext.class));
 		List<IResourceProvider> rpsDstu1 = (List<IResourceProvider>) ourAppCtx.getBean("myResourceProvidersDstu1", List.class);
 		restServerDstu1.setResourceProviders(rpsDstu1);
 

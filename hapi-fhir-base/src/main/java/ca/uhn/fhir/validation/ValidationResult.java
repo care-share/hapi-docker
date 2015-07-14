@@ -20,7 +20,15 @@ package ca.uhn.fhir.validation;
  * #L%
  */
 
-import ca.uhn.fhir.model.base.resource.BaseOperationOutcome;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
+
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.util.OperationOutcomeUtil;
 
 /**
  * Encapsulates the results of validation
@@ -29,50 +37,79 @@ import ca.uhn.fhir.model.base.resource.BaseOperationOutcome;
  * @since 0.7
  */
 public class ValidationResult {
-    private BaseOperationOutcome myOperationOutcome;
-    private boolean isSuccessful;
+	private final FhirContext myCtx;
+	private final boolean myIsSuccessful;
+	private final List<SingleValidationMessage> myMessages;
 
-    private ValidationResult(BaseOperationOutcome myOperationOutcome, boolean isSuccessful) {
-        this.myOperationOutcome = myOperationOutcome;
-        this.isSuccessful = isSuccessful;
-    }
+	public ValidationResult(FhirContext theCtx, List<SingleValidationMessage> theMessages) {
+		boolean successful = true;
+		myCtx = theCtx;
+		myMessages = theMessages;
+		for (SingleValidationMessage next : myMessages) {
+			next.getSeverity();
+			if (next.getSeverity() == null || next.getSeverity().ordinal() > ResultSeverityEnum.WARNING.ordinal()) {
+				successful = false;
+			}
+		}
+		myIsSuccessful = successful;
+	}
 
-    public static ValidationResult valueOf(BaseOperationOutcome myOperationOutcome) {
-        boolean noIssues = myOperationOutcome == null || myOperationOutcome.getIssue().isEmpty();
-        return new ValidationResult(myOperationOutcome, noIssues);
-    }
+	public List<SingleValidationMessage> getMessages() {
+		return Collections.unmodifiableList(myMessages);
+	}
 
-    public BaseOperationOutcome getOperationOutcome() {
-        return myOperationOutcome;
-    }
+	/**
+	 * Was the validation successful
+	 * 
+	 * @return true if the validation was successful
+	 */
+	public boolean isSuccessful() {
+		return myIsSuccessful;
+	}
 
-    @Override
-    public String toString() {
-        return "ValidationResult{" +
-                "myOperationOutcome=" + myOperationOutcome +
-                ", isSuccessful=" + isSuccessful +
-                ", description='" + toDescription() + '\'' +
-                '}';
-    }
+	private String toDescription() {
+		StringBuilder b = new StringBuilder(100);
+		if (myMessages.size() > 0) {
+			b.append(myMessages.get(0).getMessage());
+			b.append(" - ");
+			b.append(myMessages.get(0).getLocationString());
+		} else {
+			b.append("No issues");
+		}
+		return b.toString();
+	}
 
-    private String toDescription() {
-        StringBuilder b = new StringBuilder(100);
-        if (myOperationOutcome != null && myOperationOutcome.getIssue().size() > 0) {
-            BaseOperationOutcome.BaseIssue issueFirstRep = myOperationOutcome.getIssueFirstRep();
-            b.append(issueFirstRep.getDetailsElement().getValue());
-            b.append(" - ");
-            b.append(issueFirstRep.getLocationFirstRep().getValue());
-        }else {
-        	b.append("No issues");
-        }
-        return b.toString();
-    }
+	/**
+	 * @deprecated Use {@link #toOperationOutcome()} instead since this method returns a view
+	 */
+	@Deprecated
+	public IBaseOperationOutcome getOperationOutcome() {
+		return toOperationOutcome();
+	}
 
-    /**
-     * Was the validation successful
-     * @return true if the validation was successful
-     */
-    public boolean isSuccessful() {
-        return isSuccessful;
-    }
+	/**
+	 * Create an OperationOutcome resource which contains all of the messages found as a result of this validation
+	 */
+	public IBaseOperationOutcome toOperationOutcome() {
+		IBaseOperationOutcome oo = (IBaseOperationOutcome) myCtx.getResourceDefinition("OperationOutcome").newInstance();
+		for (SingleValidationMessage next : myMessages) {
+			String location;
+			if (isNotBlank(next.getLocationString())) {
+				location = next.getLocationString();
+			} else if (next.getLocationRow() != null || next.getLocationCol() != null) {
+				location = "Line[" + next.getLocationRow() + "] Col[" + next.getLocationCol() + "]";
+			} else {
+				location = null;
+			}
+			String severity = next.getSeverity() != null ? next.getSeverity().getCode() : null;
+			OperationOutcomeUtil.addIssue(myCtx, oo, severity, next.getMessage(), location);
+		}
+
+		return oo;
+	}
+
+	@Override
+	public String toString() {
+		return "ValidationResult{" + "messageCount=" + myMessages.size() + ", isSuccessful=" + myIsSuccessful + ", description='" + toDescription() + '\'' + '}';
+	}
 }

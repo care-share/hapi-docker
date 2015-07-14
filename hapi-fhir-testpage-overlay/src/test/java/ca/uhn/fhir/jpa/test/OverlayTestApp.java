@@ -1,5 +1,6 @@
 package ca.uhn.fhir.jpa.test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -8,6 +9,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -59,7 +61,10 @@ public class OverlayTestApp {
 
 		}
 
-		ourAppCtx = new ClassPathXmlApplicationContext("hapi-fhir-server-resourceproviders-dstu2.xml", "hapi-fhir-server-resourceproviders-dstu1.xml", "fhir-jpabase-spring-test-config.xml");
+		ourAppCtx = new ClassPathXmlApplicationContext(
+				"hapi-fhir-server-resourceproviders-dstu2.xml", 
+				"hapi-fhir-server-resourceproviders-dstu1.xml", 
+				"fhir-jpabase-spring-test-config.xml");
 		ServletContextHandler proxyHandler = new ServletContextHandler();
 		proxyHandler.setContextPath("/");
 
@@ -116,7 +121,7 @@ public class OverlayTestApp {
 			Organization o1 = new Organization();
 			o1.getName().setValue("Some Org");
 			MethodOutcome create = client.create(o1);
-			IdDt orgId = create.getId();
+			IdDt orgId = (IdDt) create.getId();
 
 			Patient p1 = new Patient();
 			p1.addIdentifier("foo:bar", "12345");
@@ -129,7 +134,7 @@ public class OverlayTestApp {
 			client.create(p1);
 
 			List<IResource> resources = restServerDstu1.getFhirContext().newJsonParser().parseBundle(IOUtils.toString(OverlayTestApp.class.getResourceAsStream("/test-server-seed-bundle.json"))).toListOfResources();
-			client.transaction(resources);
+			client.transaction().withResources(resources).execute();
 
 			client.create(p1);
 			client.create(p1);

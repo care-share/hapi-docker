@@ -50,6 +50,7 @@ import ca.uhn.fhir.model.api.IPrimitiveDatatype;
 import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.base.composite.BaseHumanNameDt;
 import ca.uhn.fhir.model.dstu2.composite.AddressDt;
+import ca.uhn.fhir.model.dstu2.composite.BoundCodeableConceptDt;
 import ca.uhn.fhir.model.dstu2.composite.CodeableConceptDt;
 import ca.uhn.fhir.model.dstu2.composite.CodingDt;
 import ca.uhn.fhir.model.dstu2.composite.ContactPointDt;
@@ -58,8 +59,11 @@ import ca.uhn.fhir.model.dstu2.composite.HumanNameDt;
 import ca.uhn.fhir.model.dstu2.composite.IdentifierDt;
 import ca.uhn.fhir.model.dstu2.composite.PeriodDt;
 import ca.uhn.fhir.model.dstu2.composite.QuantityDt;
+import ca.uhn.fhir.model.dstu2.resource.Conformance.RestSecurity;
 import ca.uhn.fhir.model.dstu2.resource.Patient;
 import ca.uhn.fhir.model.dstu2.resource.Patient.Communication;
+import ca.uhn.fhir.model.dstu2.resource.Questionnaire;
+import ca.uhn.fhir.model.dstu2.valueset.RestfulSecurityServiceEnum;
 import ca.uhn.fhir.model.primitive.BaseDateTimeDt;
 import ca.uhn.fhir.model.primitive.IntegerDt;
 import ca.uhn.fhir.model.primitive.StringDt;
@@ -173,14 +177,14 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 						continue;
 					}
 
-					if (new UriDt(BaseFhirDao.UCUM_NS).equals(nextValue.getSystemElement())) {
+					if (new UriDt(BaseHapiFhirDao.UCUM_NS).equals(nextValue.getSystemElement())) {
 						if (isNotBlank(nextValue.getCode())) {
 
 							Unit<? extends Quantity> unit = Unit.valueOf(nextValue.getCode());
 							javax.measure.converter.UnitConverter dayConverter = unit.getConverterTo(NonSI.DAY);
 							double dayValue = dayConverter.convert(nextValue.getValue().doubleValue());
 							DurationDt newValue = new DurationDt();
-							newValue.setSystem(BaseFhirDao.UCUM_NS);
+							newValue.setSystem(BaseHapiFhirDao.UCUM_NS);
 							newValue.setCode(NonSI.DAY.toString());
 							newValue.setValue(dayValue);
 							nextValue = newValue;
@@ -311,8 +315,17 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 			}
 
 			String nextPath = nextSpDef.getPath();
+			String resourceName = nextSpDef.getName();
+			
 			if (isBlank(nextPath)) {
+				
 				// TODO: implement phonetic, and any others that have no path
+				
+				if ("Questionnaire".equals(def.getName()) && nextSpDef.getName().equals("title")) {
+					Questionnaire q = (Questionnaire) theResource;
+					String title = q.getGroup().getTitle();
+					addSearchTerm(theEntity, retVal, resourceName, title);
+				}
 				continue;
 			}
 
@@ -321,7 +334,6 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 					continue;
 				}
 
-				String resourceName = nextSpDef.getName();
 				boolean multiType = false;
 				if (nextPath.endsWith("[x]")) {
 					multiType = true;
@@ -330,13 +342,7 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 				if (nextObject instanceof IPrimitiveDatatype<?>) {
 					IPrimitiveDatatype<?> nextValue = (IPrimitiveDatatype<?>) nextObject;
 					String searchTerm = nextValue.getValueAsString();
-					if (searchTerm.length() > ResourceIndexedSearchParamString.MAX_LENGTH) {
-						searchTerm = searchTerm.substring(0, ResourceIndexedSearchParamString.MAX_LENGTH);
-					}
-
-					ResourceIndexedSearchParamString nextEntity = new ResourceIndexedSearchParamString(resourceName, BaseFhirDao.normalizeString(searchTerm), searchTerm);
-					nextEntity.setResource(theEntity);
-					retVal.add(nextEntity);
+					addSearchTerm(theEntity, retVal, resourceName, searchTerm);
 				} else {
 					if (nextObject instanceof BaseHumanNameDt) {
 						ArrayList<StringDt> allNames = new ArrayList<StringDt>();
@@ -344,12 +350,7 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 						allNames.addAll(nextHumanName.getFamily());
 						allNames.addAll(nextHumanName.getGiven());
 						for (StringDt nextName : allNames) {
-							if (nextName.isEmpty()) {
-								continue;
-							}
-							ResourceIndexedSearchParamString nextEntity = new ResourceIndexedSearchParamString(resourceName, BaseFhirDao.normalizeString(nextName.getValueAsString()), nextName.getValueAsString());
-							nextEntity.setResource(theEntity);
-							retVal.add(nextEntity);
+							addSearchTerm(theEntity, retVal, resourceName, nextName.getValue());
 						}
 					} else if (nextObject instanceof AddressDt) {
 						ArrayList<StringDt> allNames = new ArrayList<StringDt>();
@@ -360,19 +361,12 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 						allNames.add(nextAddress.getCountryElement());
 						allNames.add(nextAddress.getPostalCodeElement());
 						for (StringDt nextName : allNames) {
-							if (nextName.isEmpty()) {
-								continue;
-							}
-							ResourceIndexedSearchParamString nextEntity = new ResourceIndexedSearchParamString(resourceName, BaseFhirDao.normalizeString(nextName.getValueAsString()), nextName.getValueAsString());
-							nextEntity.setResource(theEntity);
-							retVal.add(nextEntity);
+							addSearchTerm(theEntity, retVal, resourceName, nextName.getValue());
 						}
 					} else if (nextObject instanceof ContactPointDt) {
 						ContactPointDt nextContact = (ContactPointDt) nextObject;
 						if (nextContact.getValueElement().isEmpty() == false) {
-							ResourceIndexedSearchParamString nextEntity = new ResourceIndexedSearchParamString(resourceName, BaseFhirDao.normalizeString(nextContact.getValueElement().getValueAsString()), nextContact.getValue());
-							nextEntity.setResource(theEntity);
-							retVal.add(nextEntity);
+							addSearchTerm(theEntity, retVal, resourceName, nextContact.getValue());
 						}
 					} else {
 						if (!multiType) {
@@ -386,6 +380,19 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 		theEntity.setParamsStringPopulated(retVal.size() > 0);
 
 		return retVal;
+	}
+
+	private void addSearchTerm(ResourceTable theEntity, ArrayList<ResourceIndexedSearchParamString> retVal, String resourceName, String searchTerm) {
+		if (isBlank(searchTerm)) {
+			return;
+		}
+		if (searchTerm.length() > ResourceIndexedSearchParamString.MAX_LENGTH) {
+			searchTerm = searchTerm.substring(0, ResourceIndexedSearchParamString.MAX_LENGTH);
+		}
+
+		ResourceIndexedSearchParamString nextEntity = new ResourceIndexedSearchParamString(resourceName, BaseHapiFhirDao.normalizeString(searchTerm), searchTerm);
+		nextEntity.setResource(theEntity);
+		retVal.add(nextEntity);
 	}
 
 	/*
@@ -465,28 +472,21 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 				} else if (nextObject instanceof CodeableConceptDt) {
 					CodeableConceptDt nextCC = (CodeableConceptDt) nextObject;
 					if (!nextCC.getTextElement().isEmpty()) {
-						ResourceIndexedSearchParamString nextEntity = new ResourceIndexedSearchParamString(nextSpDef.getName(), BaseFhirDao.normalizeString(nextCC.getTextElement().getValue()), nextCC.getTextElement().getValue());
+						String value = nextCC.getTextElement().getValue();
+						if (value.length() > ResourceIndexedSearchParamString.MAX_LENGTH) {
+							value = value.substring(0, ResourceIndexedSearchParamString.MAX_LENGTH);
+						}
+						ResourceIndexedSearchParamString nextEntity = new ResourceIndexedSearchParamString(nextSpDef.getName(), BaseHapiFhirDao.normalizeString(value), value);
 						nextEntity.setResource(theEntity);
 						retVal.add(nextEntity);
 					}
 
-					for (CodingDt nextCoding : nextCC.getCoding()) {
-						if (nextCoding.isEmpty()) {
-							continue;
-						}
-
-						String nextSystem = nextCoding.getSystemElement().getValueAsString();
-						String nextCode = nextCoding.getCodeElement().getValue();
-						if (isNotBlank(nextSystem) || isNotBlank(nextCode)) {
-							systems.add(nextSystem);
-							codes.add(nextCode);
-						}
-
-						if (!nextCoding.getDisplayElement().isEmpty()) {
-							systems.add(null);
-							codes.add(nextCoding.getDisplayElement().getValue());
-						}
-
+					extractTokensFromCodeableConcept(systems, codes, nextCC);
+				} else if (nextObject instanceof RestSecurity) {
+					// Conformance.security search param points to something kind of useless right now - This should probably be fixed.
+					RestSecurity sec = (RestSecurity)nextObject;
+					for (BoundCodeableConceptDt<RestfulSecurityServiceEnum> nextCC : sec.getService()) {
+						extractTokensFromCodeableConcept(systems, codes, nextCC);
 					}
 				} else {
 					if (!multiType) {
@@ -532,6 +532,27 @@ class SearchParamExtractorDstu2 extends BaseSearchParamExtractor implements ISea
 		theEntity.setParamsTokenPopulated(retVal.size() > 0);
 
 		return retVal;
+	}
+
+	private void extractTokensFromCodeableConcept(List<String> systems, List<String> codes, CodeableConceptDt nextCC) {
+		for (CodingDt nextCoding : nextCC.getCoding()) {
+			if (nextCoding.isEmpty()) {
+				continue;
+			}
+
+			String nextSystem = nextCoding.getSystemElement().getValueAsString();
+			String nextCode = nextCoding.getCodeElement().getValue();
+			if (isNotBlank(nextSystem) || isNotBlank(nextCode)) {
+				systems.add(nextSystem);
+				codes.add(nextCode);
+			}
+
+			if (!nextCoding.getDisplayElement().isEmpty()) {
+				systems.add(null);
+				codes.add(nextCoding.getDisplayElement().getValue());
+			}
+
+		}
 	}
 
 }

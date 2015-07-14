@@ -24,9 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.hl7.fhir.instance.model.IBase;
-import org.hl7.fhir.instance.model.IBaseResource;
 import org.hl7.fhir.instance.model.api.IAnyResource;
+import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.base.composite.BaseResourceReferenceDt;
@@ -36,8 +36,12 @@ public class RuntimeResourceReferenceDefinition extends BaseRuntimeElementDefini
 	private final List<Class<? extends IBaseResource>> myResourceTypes;
 	private HashMap<Class<? extends IBaseResource>, RuntimeResourceDefinition> myResourceTypeToDefinition;
 
-	public RuntimeResourceReferenceDefinition(String theName, List<Class<? extends IBaseResource>> theResourceTypes) {
-		super(theName, BaseResourceReferenceDt.class);
+	/**
+	 * Constructor
+	 * @param theStandardType 
+	 */
+	public RuntimeResourceReferenceDefinition(String theName, List<Class<? extends IBaseResource>> theResourceTypes, boolean theStandardType) {
+		super(theName, BaseResourceReferenceDt.class, theStandardType);
 		if (theResourceTypes == null || theResourceTypes.isEmpty()) {
 			throw new ConfigurationException("Element '" + theName + "' has no resource types noted");
 		}

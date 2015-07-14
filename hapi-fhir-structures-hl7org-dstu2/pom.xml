@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>ca.uhn.hapi.fhir</groupId>
 		<artifactId>hapi-deployable-pom</artifactId>
-		<version>0.9-SNAPSHOT</version>
+		<version>1.1</version>
 		<relativePath>../hapi-deployable-pom/pom.xml</relativePath>
 	</parent>
 
@@ -18,32 +18,36 @@
 		<dependency>
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-base</artifactId>
-			<version>0.9-SNAPSHOT</version>
+			<version>1.1</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
 			<version>${servlet_api_version}</version>
 			<scope>provided</scope>
 		</dependency>
-		
+
+
+		<!-- <dependency> <groupId>net.sf.saxon</groupId> <artifactId>saxon</artifactId> 
+			<version>8.7</version> </dependency> -->
+
+		<dependency>
+			<groupId>xpp3</groupId>
+			<artifactId>xpp3_min</artifactId>
+			<version>1.1.4c</version>
+		</dependency>
 		<dependency>
 			<groupId>net.sf.saxon</groupId>
-			<artifactId>saxon</artifactId>
-			<version>8.7</version>
+			<artifactId>Saxon-HE</artifactId>
+			<version>9.6.0-4</version>
 		</dependency>
-		
-	<dependency>
-		<groupId>xpp3</groupId>
-		<artifactId>xpp3_min</artifactId>
-		<version>1.1.4c</version>
-	</dependency>
-	<dependency>
-		<groupId>net.sf.saxon</groupId>
-		<artifactId>Saxon-HE</artifactId>
-		<version>9.6.0-4</version>
-	</dependency>
+
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.3.1</version>
+		</dependency>
 
 		<!-- Testing -->
 		<dependency>
@@ -78,12 +82,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-servlet</artifactId>
-			<version>${jetty_version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-util</artifactId>
 			<version>${jetty_version}</version>
 			<scope>test</scope>
@@ -94,13 +92,13 @@
 			<version>${jetty_version}</version>
 			<scope>test</scope>
 		</dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-http</artifactId>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-http</artifactId>
 			<version>${jetty_version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 			<version>${logback_version}</version>
@@ -120,18 +118,18 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-		    <groupId>com.phloc</groupId>
-		    <artifactId>phloc-schematron</artifactId>
-		    <version>${phloc_schematron_version}</version>
+			<groupId>com.phloc</groupId>
+			<artifactId>phloc-schematron</artifactId>
+			<version>${phloc_schematron_version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-		    <groupId>com.phloc</groupId>
-		    <artifactId>phloc-commons</artifactId>
-		    <version>${phloc_commons_version}</version>
+			<groupId>com.phloc</groupId>
+			<artifactId>phloc-commons</artifactId>
+			<version>${phloc_commons_version}</version>
 			<scope>test</scope>
 		</dependency>
-        
+
 
 		<!-- UNIT TEST DEPENDENCIES -->
 		<dependency>
@@ -184,31 +182,45 @@
 			<version>${guava_version}</version>
 			<scope>test</scope>
 		</dependency>
-		<!-- 
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-web</artifactId>
-			<version>${spring_security_version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-config</artifactId>
-			<version>${spring_security_version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-		    <groupId>org.springframework.security</groupId>
-		    <artifactId>spring-security-jwt</artifactId>
-		    <version>1.0.2.RELEASE</version>
-			<scope>test</scope>
-		</dependency>
-		-->		
-		
+		<!-- <dependency> <groupId>org.springframework.security</groupId> <artifactId>spring-security-web</artifactId> 
+			<version>${spring_security_version}</version> <scope>test</scope> </dependency> 
+			<dependency> <groupId>org.springframework.security</groupId> <artifactId>spring-security-config</artifactId> 
+			<version>${spring_security_version}</version> <scope>test</scope> </dependency> 
+			<dependency> <groupId>org.springframework.security</groupId> <artifactId>spring-security-jwt</artifactId> 
+			<version>1.0.2.RELEASE</version> <scope>test</scope> </dependency> -->
+
 	</dependencies>
+
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<show>public</show>
+				</configuration>
+			</plugin>
+		</plugins>
+	</reporting>
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>license-maven-plugin</artifactId>
+				<configuration>
+					<!-- Don't add UHN licenses to RI structures -->
+					<skipUpdateLicense>true</skipUpdateLicense>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<fork>true</fork>
+					<verbose>true</verbose>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

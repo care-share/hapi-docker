@@ -22,24 +22,23 @@ package ca.uhn.fhir.context;
 
 import java.lang.reflect.Field;
 
-import org.hl7.fhir.instance.model.IBase;
+import org.hl7.fhir.instance.model.api.IBase;
 
-import ca.uhn.fhir.model.api.IValueSetEnumBinder;
 import ca.uhn.fhir.model.api.annotation.Child;
 import ca.uhn.fhir.model.api.annotation.Description;
 
 public class RuntimeChildPrimitiveBoundCodeDatatypeDefinition extends RuntimeChildPrimitiveDatatypeDefinition {
 
-	private IValueSetEnumBinder<Enum<?>> myBinder;
+	private Object myBinder;
 
-	public RuntimeChildPrimitiveBoundCodeDatatypeDefinition(Field theField, String theElementName, Child theChildAnnotation, Description theDescriptionAnnotation,  Class<? extends IBase> theDatatype, IValueSetEnumBinder<Enum<?>> theBinder) {
+	public RuntimeChildPrimitiveBoundCodeDatatypeDefinition(Field theField, String theElementName, Child theChildAnnotation, Description theDescriptionAnnotation,  Class<? extends IBase> theDatatype, Object theBinder) {
 		super(theField, theElementName, theDescriptionAnnotation, theChildAnnotation, theDatatype);
 
 		myBinder = theBinder;
 	}
 
 	@Override
-	public IValueSetEnumBinder<Enum<?>> getInstanceConstructorArguments() {
+	public Object getInstanceConstructorArguments() {
 		return myBinder;
 	}
 

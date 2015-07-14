@@ -177,6 +177,47 @@
 				<code>http://fhir.example.com/Patient?identifier=system%7C00001</code>
 			</p>
 
+			<a name="raw_update_access"/>
+			<h4>Accessing The Raw Resource Payload</h4>
+			<p>
+				If you wish to have access to the raw resource payload as well as the parsed value
+				for any reason, you may also add parameters which have been annotated
+				with the <code>@ResourceParam</code> of type
+				<code>String</code> (to access the raw resource body) and/or
+				<code>EncodingEnum</code> (to determine which encoding was used) 
+			</p>
+			<p>
+				The following example shows how to use these additonal data elements.
+			</p>
+
+			<macro name="snippet">
+				<param name="id" value="updateRaw" />
+				<param name="file" value="examples/src/main/java/example/RestfulPatientResourceProviderMore.java" />
+			</macro>
+
+			<a name="prefer"/>
+			<h4>Prefer Header / Returning the resource body</h4>
+			<p>
+				If you want to allow clients to request that the server return
+				the resource body as a result of the transaction, you may wish to
+				return the updated resource in the returned MethodOutcome.
+			</p>
+			<p>
+				In this type of request, the client adds a header containing
+				<code>Prefer: return=representation</code> which indicates to the server
+				that the client would like the resource returned in the response.
+			</p>
+			<p>
+				In order for the server to be able to honour this request, the
+				server method should add the updated resource to the MethodOutcome object
+				being returned, as shown in the example below.
+			</p>
+			
+			<macro name="snippet">
+				<param name="id" value="updatePrefer" />
+				<param name="file" value="examples/src/main/java/example/RestfulPatientResourceProviderMore.java" />
+			</macro>
+
 			<a name="instance_delete" />
 		</section>
 
@@ -337,6 +378,20 @@
 				Example URL and HTTP header to perform a conditional create:
 				<br />
 				<code>http://fhir.example.com/Patient<br/>If-None-Exist: Patient?identifier=system%7C0001</code>
+			</p>
+			
+			<h4>Prefer Header / Returning the resource body</h4>
+			<p>
+				If you wish to allow your server to honour the <code>Prefer</code>
+				header, the same mechanism shown above for 
+				<a href="#prefer">Prefer Header for Updates</a> should be used.
+			</p>
+
+			<h4>Accessing The Raw Resource Payload</h4>
+			<p>
+				The create operation also supports access to the raw payload,
+				using the same semantics as raw payload access 
+				<a href="#raw_update_access">for the update operation</a>.
 			</p>
 			
 			<a name="type_search" />
@@ -1034,6 +1089,17 @@
 				operation tests whether a resource passes business validation, and would be
 				acceptable for saving to a server (e.g. by a create or update method).
 			</p>
+			<p class="doc_info_bubble">
+				<b>Note on FHIR versions:</b>
+				In FHIR DSTU1 the validate operation used a URL resembling <code>http://example.com/Patient/_validate</code>
+				with a resource in the HTTP POST body. In FHIR DSTU2, validate has been changed to use the
+				<a href="#extended_operations">extended operation</a> mechanism. It now uses a URL
+				resembling <code>http://example.com/Patient/$validate</code> and takes a 
+				Parameters resource as input in the method body.<br/><br/>
+				The mechanism described below may be used for both DSTU1 and DSTU2+ servers, and HAPI
+				will automatically use the correct form depending on what FHIR version the
+				server is configured to use.
+			</p>
 			<p>
 				Validate methods must be annotated with the
 				<a href="./apidocs/ca/uhn/fhir/rest/annotation/Validate.html">@Validate</a>
@@ -1083,10 +1149,19 @@
 			</macro>
 
 			<p>
+				In the example above, only the <code>@ResourceParam</code> parameter is technically required, but
+				in DSTU2 you are encouraged to also add the following parameters: 
+			</p>
+			<ul>
+				<li><b>@Validate.Mode ValidationModeEnum mode</b> - This is the validation mode (see the FHIR specification for information on this)</li>
+				<li><b>@Validate.Profile String profile</b> - This is the profile to validate against (see the FHIR specification for more information on this)</li>
+			</ul>
+			
+			<p>
 				Example URL to invoke this method (this would be invoked using an HTTP POST,
-				with the resource in the POST body):
+				with a Parameters resource in the POST body):
 				<br />
-				<code>http://fhir.example.com/Patient/_validate</code>
+				<code>http://fhir.example.com/Patient/$validate</code>
 			</p>
 
 			<a name="system_conformance" />
@@ -1483,6 +1558,7 @@
 				<code>http://fhir.example.com/Patient/123/Condition</code>
 			</p>
 			
+			<a name="extended_operations"/>
 		</section>
 
 		<section name="Extended Operations">

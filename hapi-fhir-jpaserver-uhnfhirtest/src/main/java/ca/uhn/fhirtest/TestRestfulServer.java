@@ -8,8 +8,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.web.context.ContextLoaderListener;
+import org.springframework.web.context.WebApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.IFhirSystemDao;
@@ -25,6 +26,7 @@ import ca.uhn.fhir.rest.server.HardcodedServerAddressStrategy;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.IServerInterceptor;
+import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 
 public class TestRestfulServer extends RestfulServer {
 
@@ -32,7 +34,7 @@ public class TestRestfulServer extends RestfulServer {
 
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(TestRestfulServer.class);
 
-	private ApplicationContext myAppCtx;
+	private ClassPathXmlApplicationContext myAppCtx;
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -40,7 +42,7 @@ public class TestRestfulServer extends RestfulServer {
 		super.initialize();
 
 		// Get the spring context from the web container (it's declared in web.xml)
-		myAppCtx = ContextLoaderListener.getCurrentWebApplicationContext();
+		WebApplicationContext parentAppCtx = ContextLoaderListener.getCurrentWebApplicationContext();
 
 		// These two parmeters are also declared in web.xml
 		String implDesc = getInitParameter("ImplementationDescription");
@@ -55,23 +57,15 @@ public class TestRestfulServer extends RestfulServer {
 		List<IResourceProvider> beans;
 		JpaSystemProviderDstu1 systemProviderDstu1 = null;
 		JpaSystemProviderDstu2 systemProviderDstu2 = null;
+		@SuppressWarnings("rawtypes")
 		IFhirSystemDao systemDao;
 		ETagSupportEnum etagSupport;
 		String baseUrlProperty;
 		switch (fhirVersionParam.trim().toUpperCase()) {
-		case "BASE": {
-			setFhirContext(FhirContext.forDstu1());
-			beans = myAppCtx.getBean("myResourceProvidersDstu1", List.class);
-			systemProviderDstu1 = myAppCtx.getBean("mySystemProviderDstu1", JpaSystemProviderDstu1.class);
-			systemDao = myAppCtx.getBean("mySystemDaoDstu1", IFhirSystemDao.class);
-			etagSupport = ETagSupportEnum.DISABLED;
-			JpaConformanceProviderDstu1 confProvider = new JpaConformanceProviderDstu1(this, systemDao);
-			confProvider.setImplementationDescription(implDesc);
-			setServerConformanceProvider(confProvider);
-			baseUrlProperty = "fhir.baseurl";
-			break;
-		}
 		case "DSTU1": {
+			myAppCtx = new ClassPathXmlApplicationContext(new String[] { 
+					"hapi-fhir-server-database-config-dstu1.xml", 
+					"hapi-fhir-server-resourceproviders-dstu1.xml"}, parentAppCtx);
 			setFhirContext(FhirContext.forDstu1());
 			beans = myAppCtx.getBean("myResourceProvidersDstu1", List.class);
 			systemProviderDstu1 = myAppCtx.getBean("mySystemProviderDstu1", JpaSystemProviderDstu1.class);
@@ -84,6 +78,10 @@ public class TestRestfulServer extends RestfulServer {
 			break;
 		}
 		case "DSTU2": {
+			myAppCtx = new ClassPathXmlApplicationContext(new String[] {
+					"hapi-fhir-server-database-config-dstu2.xml", 
+					"hapi-fhir-server-resourceproviders-dstu2.xml", 
+					}, parentAppCtx);
 			setFhirContext(FhirContext.forDstu2());
 			beans = myAppCtx.getBean("myResourceProvidersDstu2", List.class);
 			systemProviderDstu2 = myAppCtx.getBean("mySystemProviderDstu2", JpaSystemProviderDstu2.class);
@@ -120,7 +118,7 @@ public class TestRestfulServer extends RestfulServer {
 		}
 		setResourceProviders(beans);
 
-		List provList = new ArrayList();
+		List<Object> provList = new ArrayList<Object>();
 		if (systemProviderDstu1 != null)
 			provList.add(systemProviderDstu1);
 		if (systemProviderDstu2 != null)
@@ -128,15 +126,13 @@ public class TestRestfulServer extends RestfulServer {
 		setPlainProviders(provList);
 
 		/*
-		 * This tells the server to use "incorrect" MIME types if it detects that the
-		 * request is coming from a browser in the hopes that the browser won't just treat
-		 * the content as a binary payload and try to download it (which is what generally
-		 * happens if you load a FHIR URL in a browser)
+		 * We want to format the response using nice HTML if it's a browser, since this
+		 * makes things a little easier for testers.
 		 */
-		setUseBrowserFriendlyContentTypes(true);
-
+		registerInterceptor(new ResponseHighlighterInterceptor());
+		
 		/*
-		 * Default to XML and pretty printing
+		 * Default to JSON with pretty printing
 		 */
 		setDefaultPrettyPrint(true);
 		setDefaultResponseEncoding(EncodingEnum.JSON);

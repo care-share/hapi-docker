@@ -22,7 +22,7 @@ package ca.uhn.fhir.context;
 
 import java.lang.reflect.Field;
 
-import org.hl7.fhir.instance.model.IBase;
+import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseEnumFactory;
 
 import ca.uhn.fhir.model.api.annotation.Child;
@@ -30,29 +30,30 @@ import ca.uhn.fhir.model.api.annotation.Description;
 
 public class RuntimeChildEnumerationDatatypeDefinition extends RuntimeChildPrimitiveDatatypeDefinition {
 
-    private Class<? extends IBaseEnumFactory<?>> myBinderType;
-    private volatile IBaseEnumFactory<?> myBinder;
+	private Class<? extends IBaseEnumFactory<?>> myBinderType;
+	private volatile IBaseEnumFactory<?> myBinder;
 
-    public RuntimeChildEnumerationDatatypeDefinition(Field theField, String theElementName, Child theChildAnnotation, Description theDescriptionAnnotation, Class<? extends IBase> theDatatype, Class<? extends IBaseEnumFactory<?>> theBinderType) {
-        super(theField, theElementName, theDescriptionAnnotation, theChildAnnotation, theDatatype);
+	public RuntimeChildEnumerationDatatypeDefinition(Field theField, String theElementName, Child theChildAnnotation, Description theDescriptionAnnotation, Class<? extends IBase> theDatatype,
+			Class<? extends IBaseEnumFactory<?>> theBinderType) {
+		super(theField, theElementName, theDescriptionAnnotation, theChildAnnotation, theDatatype);
 
-        myBinderType = theBinderType;
-    }
+		myBinderType = theBinderType;
+	}
 
-    @Override
-    public IBaseEnumFactory<?> getInstanceConstructorArguments() {
-        IBaseEnumFactory<?> retVal = myBinder;
-        if (retVal == null) {
-            try {
-                retVal = myBinderType.newInstance();
-            } catch (InstantiationException e) {
-                throw new IllegalStateException("Failed to instantiate " + myBinderType, e);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException("Failed to instantiate " + myBinderType, e);
-            }
-            myBinder = retVal;
-        }
-        return retVal;
-    }
+	@Override
+	public IBaseEnumFactory<?> getInstanceConstructorArguments() {
+		IBaseEnumFactory<?> retVal = myBinder;
+		if (retVal == null) {
+			try {
+				retVal = myBinderType.newInstance();
+			} catch (InstantiationException e) {
+				throw new IllegalStateException("Failed to instantiate " + myBinderType, e);
+			} catch (IllegalAccessException e) {
+				throw new IllegalStateException("Failed to instantiate " + myBinderType, e);
+			}
+			myBinder = retVal;
+		}
+		return retVal;
+	}
 
 }

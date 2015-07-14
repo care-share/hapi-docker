@@ -1,10 +1,12 @@
 package ca.uhn.fhirtest;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IResource;
@@ -23,10 +25,12 @@ public class UhnFhirTestApp {
 
 		int myPort = 8888;
 		String base = "http://localhost:" + myPort + "/base";
-
+		
 		//		new File("target/testdb").mkdirs();
 		System.setProperty("fhir.db.location", "./target/testdb");
-		System.setProperty("fhir.baseurl", base);
+		System.setProperty("fhir.db.location.dstu2", "./target/testdb_dstu2");
+		System.setProperty("fhir.baseurl.dstu1", base + "Dstu1");
+		System.setProperty("fhir.baseurl.dstu2", base + "Dstu1");
 		
 		Server server = new Server(myPort);
 
@@ -53,7 +57,7 @@ public class UhnFhirTestApp {
 			Organization o1 = new Organization();
 			o1.getName().setValue("Some Org");
 			MethodOutcome create = client.create(o1);
-			IdDt orgId = create.getId();
+			IdDt orgId = (IdDt) create.getId();
 
 			Patient p1 = new Patient();
 			p1.addIdentifier("foo:bar", "12345");
@@ -65,8 +69,8 @@ public class UhnFhirTestApp {
 			ResourceMetadataKeyEnum.TAG_LIST.put(p1, list);
 			client.create(p1);
 
-			List<IResource> resources = ctx.newJsonParser().parseBundle(IOUtils.toString(UhnFhirTestApp.class.getResourceAsStream("/test-server-seed-bundle.json"))).toListOfResources();
-			client.transaction(resources);
+			List<IResource> resources = ctx.newJsonParser().parseBundle(IOUtils.toString(UhnFhirTestApp.class.getResourceAsStream("/bundle.json"))).toListOfResources();
+			client.transaction().withResources(resources).execute();
 
 //			for (int i = 0; i < 1000; i++) {
 //				

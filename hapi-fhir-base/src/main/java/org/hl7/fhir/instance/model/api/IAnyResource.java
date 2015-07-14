@@ -20,7 +20,6 @@ package org.hl7.fhir.instance.model.api;
  * #L%
  */
 
-import org.hl7.fhir.instance.model.IBaseResource;
 
 public interface IAnyResource extends IBaseResource {
 
@@ -30,6 +29,6 @@ public interface IAnyResource extends IBaseResource {
 
 	IIdType getIdElement();
 
-	IMetaType getMeta();
+	IBaseMetaType getMeta();
 	
 }

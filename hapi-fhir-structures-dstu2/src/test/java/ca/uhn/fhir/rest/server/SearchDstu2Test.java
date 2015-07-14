@@ -2,8 +2,12 @@ package ca.uhn.fhir.rest.server;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.stringContainsInOrder;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
@@ -15,6 +19,7 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -23,8 +28,9 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.dstu2.resource.Bundle;
 import ca.uhn.fhir.model.dstu2.resource.Patient;
-import ca.uhn.fhir.narrative.DefaultThymeleafNarrativeGenerator;
+import ca.uhn.fhir.model.primitive.InstantDt;
 import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.util.PatternMatcher;
 import ca.uhn.fhir.util.PortUtil;
 
 /**
@@ -33,9 +39,11 @@ import ca.uhn.fhir.util.PortUtil;
 public class SearchDstu2Test {
 
 	private static CloseableHttpClient ourClient;
-	private static FhirContext ourCtx = new FhirContext();
+	private static FhirContext ourCtx = FhirContext.forDstu2();
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(SearchDstu2Test.class);
 	private static int ourPort;
+
+	private static InstantDt ourReturnPublished;
 
 	private static Server ourServer;
 
@@ -73,6 +81,31 @@ public class SearchDstu2Test {
 		assertNull(status.getFirstHeader(Constants.HEADER_CONTENT_LOCATION));
 	}
 
+	@Test
+	public void testResultBundleHasUuid() throws Exception {
+		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient?_query=searchWithRef");
+		HttpResponse status = ourClient.execute(httpGet);
+		String responseContent = IOUtils.toString(status.getEntity().getContent());
+		IOUtils.closeQuietly(status.getEntity().getContent());
+		ourLog.info(responseContent);
+		
+		assertEquals(200, status.getStatusLine().getStatusCode());
+		assertThat(responseContent, PatternMatcher.pattern("id value..[0-9a-f-]+\\\""));
+	}
+
+	@Test
+	public void testResultBundleHasUpdateTime() throws Exception {
+		ourReturnPublished = new InstantDt("2011-02-03T11:22:33Z");
+		
+		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient?_query=searchWithBundleProvider&_pretty=true");
+		HttpResponse status = ourClient.execute(httpGet);
+		String responseContent = IOUtils.toString(status.getEntity().getContent());
+		IOUtils.closeQuietly(status.getEntity().getContent());
+		ourLog.info(responseContent);
+
+		assertThat(responseContent, stringContainsInOrder("<lastUpdated value=\"2011-02-03T11:22:33Z\"/>"));
+	}
+
 	@AfterClass
 	public static void afterClass() throws Exception {
 		ourServer.stop();
@@ -86,7 +119,7 @@ public class SearchDstu2Test {
 		DummyPatientResourceProvider patientProvider = new DummyPatientResourceProvider();
 
 		ServletHandler proxyHandler = new ServletHandler();
-		RestfulServer servlet = new RestfulServer();
+		RestfulServer servlet = new RestfulServer(ourCtx);
 
 		servlet.setResourceProviders(patientProvider);
 		ServletHolder servletHolder = new ServletHolder(servlet);
@@ -101,11 +134,42 @@ public class SearchDstu2Test {
 
 	}
 
-
 	/**
 	 * Created by dsotnikov on 2/25/2014.
 	 */
 	public static class DummyPatientResourceProvider implements IResourceProvider {
+		
+
+		@Override
+		public Class<? extends IResource> getResourceType() {
+			return Patient.class;
+		}
+
+		@Search(queryName="searchWithBundleProvider")
+		public IBundleProvider searchWithBundleProvider() {
+			return new IBundleProvider() {
+				
+				@Override
+				public InstantDt getPublished() {
+					return ourReturnPublished;
+				}
+				
+				@Override
+				public List<IBaseResource> getResources(int theFromIndex, int theToIndex) {
+					throw new IllegalStateException();
+				}
+				
+				@Override
+				public Integer preferredPageSize() {
+					return null;
+				}
+				
+				@Override
+				public int size() {
+					return 0;
+				}
+			};
+		}
 		
 		@Search(queryName="searchWithRef")
 		public Patient searchWithRef() {
@@ -113,11 +177,6 @@ public class SearchDstu2Test {
 			patient.setId("Patient/1/_history/1");
 			patient.getManagingOrganization().setReference("http://localhost:" + ourPort + "/Organization/555/_history/666");
 			return patient;
-		}
-
-		@Override
-		public Class<? extends IResource> getResourceType() {
-			return Patient.class;
 		}
 
 	}

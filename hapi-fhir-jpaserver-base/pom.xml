@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>ca.uhn.hapi.fhir</groupId>
 		<artifactId>hapi-deployable-pom</artifactId>
-		<version>1.0</version>
+		<version>1.1</version>
 		<relativePath>../hapi-deployable-pom/pom.xml</relativePath>
 	</parent>
 
@@ -31,7 +31,7 @@
 		<dependency>
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-base</artifactId>
-			<version>1.0</version>
+			<version>1.1</version>
 			<exclusions>
 				<exclusion>
 					<artifactId>commons-logging</artifactId>
@@ -42,13 +42,19 @@
 		<dependency>
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-structures-dstu</artifactId>
-			<version>1.0</version>
+			<version>1.1</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-structures-dstu2</artifactId>
-			<version>1.0</version>
+			<version>1.1</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>ca.uhn.hapi.fhir</groupId>
+			<artifactId>hapi-fhir-structures-hl7org-dstu2</artifactId>
+			<version>1.1</version>
 			<optional>true</optional>
 		</dependency>
 
@@ -74,6 +80,19 @@
 			<groupId>org.thymeleaf</groupId>
 			<artifactId>thymeleaf</artifactId>
 			<version>${thymeleaf-version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.phloc</groupId>
+			<artifactId>phloc-schematron</artifactId>
+			<version>${phloc_schematron_version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.phloc</groupId>
+			<artifactId>phloc-commons</artifactId>
+			<version>${phloc_commons_version}</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -245,12 +264,6 @@
 		</dependency>
 		
 		<dependency>
-		    <groupId>org.apache.derby</groupId>
-		    <artifactId>derby</artifactId>
-		    <version>${derby_version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-servlets</artifactId>
 			<version>${jetty_version}</version>
@@ -265,12 +278,6 @@
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-server</artifactId>
-			<version>${jetty_version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-servlet</artifactId>
 			<version>${jetty_version}</version>
 			<scope>test</scope>
 		</dependency>
@@ -303,6 +310,17 @@
 			</plugins>
 		</pluginManagement>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!--
+					These tests all use a shared database, so it's easier if
+					they run in a predictable order 
+					-->
+					<runOrder>alphabetical</runOrder>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>de.juplo</groupId>
 				<artifactId>hibernate4-maven-plugin</artifactId>
@@ -373,7 +391,7 @@
 			<plugin>
 				<groupId>ca.uhn.hapi.fhir</groupId>
 				<artifactId>hapi-tinder-plugin</artifactId>
-				<version>1.0</version>
+				<version>1.1</version>
 				<executions>
 					<execution>
 						<id>build_dstu1</id>
@@ -404,12 +422,12 @@
 					<dependency>
 						<groupId>ca.uhn.hapi.fhir</groupId>
 						<artifactId>hapi-fhir-structures-dstu</artifactId>
-						<version>1.0</version>
+						<version>1.1</version>
 					</dependency>
 					<dependency>
 						<groupId>ca.uhn.hapi.fhir</groupId>
 						<artifactId>hapi-fhir-structures-dstu2</artifactId>
-						<version>1.0</version>
+						<version>1.1</version>
 					</dependency>
 				</dependencies>
 			</plugin>

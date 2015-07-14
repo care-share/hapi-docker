@@ -235,10 +235,12 @@ public class IncludeDstu2Test {
 
 	@Test
 	public void testTwoInclude() throws Exception {
-		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient?name=Hello&_include=foo&_include=bar");
+		HttpGet httpGet = new HttpGet("http://localhost:" + ourPort + "/Patient?name=Hello&_include=foo&_include=bar&_pretty=true");
 		HttpResponse status = ourClient.execute(httpGet);
 		String responseContent = IOUtils.toString(status.getEntity().getContent());
 		IOUtils.closeQuietly(status.getEntity().getContent());
+
+		ourLog.info(responseContent);
 
 		assertEquals(200, status.getStatusLine().getStatusCode());
 		Bundle bundle = ourCtx.newXmlParser().parseBundle(responseContent);
@@ -270,15 +272,14 @@ public class IncludeDstu2Test {
 	@BeforeClass
 	public static void beforeClass() throws Exception {
 
-		ourCtx = new FhirContext();
+		ourCtx = FhirContext.forDstu2();
 		ourPort = PortUtil.findFreePort();
 		ourServer = new Server(ourPort);
 
 		DummyPatientResourceProvider patientProvider = new DummyPatientResourceProvider();
 
 		ServletHandler proxyHandler = new ServletHandler();
-		RestfulServer servlet = new RestfulServer();
-		servlet.setFhirContext(ourCtx);
+		RestfulServer servlet = new RestfulServer(ourCtx);
 		servlet.setResourceProviders(patientProvider, new DummyDiagnosticReportResourceProvider());
         servlet.setBundleInclusionRule(BundleInclusionRule.BASED_ON_RESOURCE_PRESENCE);
 		ServletHolder servletHolder = new ServletHolder(servlet);

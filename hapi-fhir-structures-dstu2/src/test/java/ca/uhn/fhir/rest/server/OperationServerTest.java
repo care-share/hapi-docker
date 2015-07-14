@@ -1,7 +1,10 @@
 package ca.uhn.fhir.rest.server;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +23,7 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -30,6 +34,7 @@ import ca.uhn.fhir.model.api.IResource;
 import ca.uhn.fhir.model.dstu2.resource.Bundle;
 import ca.uhn.fhir.model.dstu2.resource.Parameters;
 import ca.uhn.fhir.model.dstu2.resource.Patient;
+import ca.uhn.fhir.model.primitive.DateTimeDt;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.model.primitive.IntegerDt;
 import ca.uhn.fhir.model.primitive.StringDt;
@@ -64,6 +69,14 @@ public class OperationServerTest {
 		ourLastMethod = "";
 	}
 
+	public static void main(String[] theValue) {
+		Parameters p = new Parameters();
+		p.addParameter().setName("start").setValue(new DateTimeDt("2001-01-02"));
+		p.addParameter().setName("end").setValue(new DateTimeDt("2015-07-10"));
+		String inParamsStr = FhirContext.forDstu2().newXmlParser().encodeResourceToString(p);
+		ourLog.info(inParamsStr.replace("\"", "\\\""));
+	}
+	
 	@Test
 	public void testOperationOnType() throws Exception {
 		Parameters p = new Parameters();
@@ -330,7 +343,7 @@ public class OperationServerTest {
 		ourServer = new Server(ourPort);
 
 		ServletHandler proxyHandler = new ServletHandler();
-		RestfulServer servlet = new RestfulServer();
+		RestfulServer servlet = new RestfulServer(ourCtx);
 		
 		servlet.setPagingProvider(new FifoMemoryPagingProvider(10).setDefaultPageSize(2));
 		
@@ -356,7 +369,7 @@ public class OperationServerTest {
 		public IBundleProvider opInstanceReturnsBundleProvider() {
 			ourLastMethod = "$OP_INSTANCE_BUNDLE_PROVIDER";
 
-			List<IResource> resources = new ArrayList<IResource>();
+			List<IBaseResource> resources = new ArrayList<IBaseResource>();
 			for (int i =0; i < 100;i++) {
 				Patient p = new Patient();
 				p.setId("Patient/" + i);

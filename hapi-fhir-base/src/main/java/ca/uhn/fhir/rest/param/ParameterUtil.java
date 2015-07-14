@@ -20,8 +20,6 @@ package ca.uhn.fhir.rest.param;
  * #L%
  */
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -34,6 +32,7 @@ import org.apache.commons.lang3.time.DateUtils;
 
 import ca.uhn.fhir.model.primitive.InstantDt;
 import ca.uhn.fhir.model.primitive.IntegerDt;
+import ca.uhn.fhir.util.UrlUtil;
 
 public class ParameterUtil {
 
@@ -228,11 +227,8 @@ public class ParameterUtil {
 			return null;
 		}
 		
-		try {
-			return URLEncoder.encode(escape(theValue), "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new Error("UTF-8 not supported on this platform");
-		}
+		String escaped = escape(theValue);
+		return UrlUtil.escape(escaped);
 	}
 
 	/**

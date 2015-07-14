@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.hl7.fhir.instance.model.IBase;
-import org.hl7.fhir.instance.model.IBaseResource;
+import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.model.api.annotation.Child;
 import ca.uhn.fhir.model.api.annotation.Description;
@@ -85,29 +85,34 @@ public class RuntimeChildChoiceDefinition extends BaseRuntimeDeclaredChildDefini
 		for (Class<? extends IBase> next : myChoiceTypes) {
 
 			String elementName;
-			String alternateElementName = null;
 			BaseRuntimeElementDefinition<?> nextDef;
 			if (IBaseResource.class.isAssignableFrom(next)) {
 				elementName = getElementName() + StringUtils.capitalize(next.getSimpleName());
-				alternateElementName = getElementName() + "Resource";
 				List<Class<? extends IBaseResource>> types = new ArrayList<Class<? extends IBaseResource>>();
 				types.add((Class<? extends IBaseResource>) next);
-				nextDef = new RuntimeResourceReferenceDefinition(elementName, types);
+				nextDef = new RuntimeResourceReferenceDefinition(elementName, types, false);
 				nextDef.sealAndInitialize(theContext, theClassToElementDefinitions);
+				
+				myNameToChildDefinition.put(getElementName() + "Reference", nextDef);
+				myNameToChildDefinition.put(getElementName() + "Resource", nextDef);
+				
 			} else {
 				nextDef = theClassToElementDefinitions.get(next);
 				elementName = getElementName() + StringUtils.capitalize(nextDef.getName());
 			}
 
 			myNameToChildDefinition.put(elementName, nextDef);
-			if (alternateElementName != null) {
-				myNameToChildDefinition.put(alternateElementName, nextDef);
-			}
 			
 			if (IBaseResource.class.isAssignableFrom(next)) {
 				Class<? extends IBase> refType = theContext.getVersion().getResourceReferenceType();
 				myDatatypeToElementDefinition.put(refType, nextDef);
-				alternateElementName = getElementName() + "Resource";
+				
+				String alternateElementName;
+				if (theContext.getVersion().getVersion().equals(FhirVersionEnum.DSTU1)) {
+					alternateElementName = getElementName() + "Resource";
+				} else {
+					alternateElementName = getElementName() + "Reference";
+				}
 				myDatatypeToElementName.put(refType, alternateElementName);
 			}
 			

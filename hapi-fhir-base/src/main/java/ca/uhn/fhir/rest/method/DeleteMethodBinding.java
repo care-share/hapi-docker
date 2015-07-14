@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.hl7.fhir.instance.model.api.IIdType;
+
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -77,11 +79,6 @@ public class DeleteMethodBinding extends BaseOutcomeReturningMethodBinding {
 					+ " annotation but delete methods may not have this annotation");
 		}
 
-	}
-
-	@Override
-	protected boolean requestContainsResource() {
-		return false;
 	}
 
 	@Override
@@ -140,13 +137,13 @@ public class DeleteMethodBinding extends BaseOutcomeReturningMethodBinding {
 		return retVal;
 	}
 
-	public static HttpDeleteClientInvocation createDeleteInvocation(IdDt theId) {
+	public static HttpDeleteClientInvocation createDeleteInvocation(IIdType theId) {
 		HttpDeleteClientInvocation retVal = new HttpDeleteClientInvocation(theId);
 		return retVal;
 	}
 
 	@Override
-	protected void addParametersForServerRequest(Request theRequest, Object[] theParams) {
+	protected void addParametersForServerRequest(RequestDetails theRequest, Object[] theParams) {
 		theParams[myIdParameterIndex] = theRequest.getId();
 	}
 

@@ -20,16 +20,16 @@ package ca.uhn.fhir.model.api;
  * #L%
  */
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import ca.uhn.fhir.model.api.annotation.ResourceDef;
 import ca.uhn.fhir.model.base.composite.BaseContainedDt;
 import ca.uhn.fhir.model.base.composite.BaseNarrativeDt;
 import ca.uhn.fhir.model.base.resource.ResourceMetadataMap;
 import ca.uhn.fhir.model.primitive.CodeDt;
 import ca.uhn.fhir.model.primitive.IdDt;
-
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * This interface is the parent interface for all FHIR Resource definition
@@ -42,10 +42,9 @@ import java.util.Set;
  * should not need to implement it directly.
  * </p>
  */
-public interface IResource extends ICompositeElement, org.hl7.fhir.instance.model.IBaseResource {
+public interface IResource extends ICompositeElement, org.hl7.fhir.instance.model.api.IBaseResource {
     public static final Include INCLUDE_ALL = new Include("*");
     public static final Set<Include> WILDCARD_ALL_SET = new HashSet<Include>(Arrays.asList(INCLUDE_ALL));
-
 
     /**
 	 * Returns the contained resource list for this resource.

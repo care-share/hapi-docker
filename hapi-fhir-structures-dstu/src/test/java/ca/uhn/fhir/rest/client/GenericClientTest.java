@@ -25,6 +25,7 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicStatusLine;
+import org.hamcrest.Matchers;
 import org.hamcrest.core.StringContains;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -55,6 +56,7 @@ import ca.uhn.fhir.rest.server.Constants;
 import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.util.UrlUtil;
 
 public class GenericClientTest {
 
@@ -69,7 +71,7 @@ public class GenericClientTest {
 
 		myHttpClient = mock(HttpClient.class, new ReturnsDeepStubs());
 		ourCtx.getRestfulClientFactory().setHttpClient(myHttpClient);
-		ourCtx.getRestfulClientFactory().setServerValidationModeEnum(ServerValidationModeEnum.NEVER);
+		ourCtx.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
 
 		myHttpResponse = mock(HttpResponse.class, new ReturnsDeepStubs());
 	}
@@ -291,7 +293,7 @@ public class GenericClientTest {
 
 		IGenericClient client = ourCtx.newRestfulGenericClient("http://example.com/fhir");
 
-		MethodOutcome outcome = client.create(p1);
+		MethodOutcome outcome = client.create().resource(p1).execute();
 		assertEquals("44", outcome.getId().getIdPart());
 		assertEquals("22", outcome.getId().getVersionIdPart());
 
@@ -709,7 +711,7 @@ public class GenericClientTest {
 		Bundle response = client.search()
 				.forResource(Patient.class)
 				.encodedJson()
-				.revinclude(Provenance.INCLUDE_TARGET)
+				.revInclude(Provenance.INCLUDE_TARGET)
 				.execute();
 		//@formatter:on
 
@@ -778,7 +780,7 @@ public class GenericClientTest {
 	@Test
 	public void testSearchByNumberExact() throws Exception {
 
-		String msg = new FhirContext().newXmlParser().encodeBundleToString(new Bundle());
+		String msg = ourCtx.newXmlParser().encodeBundleToString(new Bundle());
 
 		ArgumentCaptor<HttpUriRequest> capt = ArgumentCaptor.forClass(HttpUriRequest.class);
 		when(myHttpClient.execute(capt.capture())).thenReturn(myHttpResponse);
@@ -976,6 +978,56 @@ public class GenericClientTest {
 		//@formatter:on
 
 		assertEquals("http://example.com/fhir/Patient?identifier=" + URLEncoder.encode("A|B,C|D", "UTF-8"), capt.getAllValues().get(2).getURI().toString());
+
+	}
+
+	/**
+	 * Test for #192
+	 */
+	@SuppressWarnings("unused")
+	@Test
+	public void testSearchByTokenWithEscaping() throws Exception {
+		final String msg = getPatientFeedWithOneResult();
+
+		ArgumentCaptor<HttpUriRequest> capt = ArgumentCaptor.forClass(HttpUriRequest.class);
+		when(myHttpClient.execute(capt.capture())).thenReturn(myHttpResponse);
+		when(myHttpResponse.getStatusLine()).thenReturn(new BasicStatusLine(new ProtocolVersion("HTTP", 1, 1), 200, "OK"));
+		when(myHttpResponse.getEntity().getContentType()).thenReturn(new BasicHeader("content-type", Constants.CT_FHIR_XML + "; charset=UTF-8"));
+		when(myHttpResponse.getEntity().getContent()).thenAnswer(new Answer<InputStream>() {
+			@Override
+			public InputStream answer(InvocationOnMock theInvocation) throws Throwable {
+				return new ReaderInputStream(new StringReader(msg), Charset.forName("UTF-8"));
+			}});
+
+		IGenericClient client = ourCtx.newRestfulGenericClient("http://foo");
+		int index = 0;
+		String wantPrefix = "http://foo/Patient?identifier=";
+
+		//@formatter:off
+		Bundle response = client.search()
+				.forResource("Patient")
+				.where(Patient.IDENTIFIER.exactly().systemAndCode("1", "2"))
+				.execute();
+		String wantValue = "1|2";
+		String url = capt.getAllValues().get(index).getURI().toString();
+		assertThat(url, Matchers.startsWith(wantPrefix));
+		assertEquals(wantValue, UrlUtil.unescape(url.substring(wantPrefix.length())));
+		assertEquals(UrlUtil.escape(wantValue), url.substring(wantPrefix.length()));
+		index++;
+		//@formatter:on
+
+		//@formatter:off
+		response = client.search()
+				.forResource("Patient")
+				.where(Patient.IDENTIFIER.exactly().systemAndCode("1,2", "3,4"))
+				.execute();
+		wantValue = "1\\,2|3\\,4";
+		url = capt.getAllValues().get(index).getURI().toString();
+		assertThat(url, Matchers.startsWith(wantPrefix));
+		assertEquals(wantValue, UrlUtil.unescape(url.substring(wantPrefix.length())));
+		assertEquals(UrlUtil.escape(wantValue), url.substring(wantPrefix.length()));
+		index++;
+		//@formatter:on
 
 	}
 
@@ -1177,7 +1229,7 @@ public class GenericClientTest {
 		//@formatter:on
 
 		assertEquals("http://example.com/fhir", capt.getValue().getURI().toString());
-		assertEquals(bundle.getEntries().get(0).getId(), response.getEntries().get(0).getId());
+		assertEquals(bundle.getEntries().get(0).getResource().getId(), response.getEntries().get(0).getResource().getId());
 		assertEquals(EncodingEnum.XML.getBundleContentType() + Constants.HEADER_SUFFIX_CT_UTF_8, capt.getAllValues().get(0).getFirstHeader(Constants.HEADER_CONTENT_TYPE).getValue());
 
 	}
@@ -1210,7 +1262,7 @@ public class GenericClientTest {
 
 		assertEquals("http://example.com/fhir?_format=json", value.getURI().toString());
 		assertThat(IOUtils.toString(value.getEntity().getContent()), StringContains.containsString("\"resourceType\""));
-		assertEquals(bundle.getEntries().get(0).getId(), response.getEntries().get(0).getId());
+		assertEquals(bundle.getEntries().get(0).getResource().getId(), response.getEntries().get(0).getResource().getId());
 	}
 
 	@Test
@@ -1360,7 +1412,7 @@ public class GenericClientTest {
 
 	@BeforeClass
 	public static void beforeClass() {
-		ourCtx = new FhirContext();
+		ourCtx = FhirContext.forDstu1();
 	}
 
 }

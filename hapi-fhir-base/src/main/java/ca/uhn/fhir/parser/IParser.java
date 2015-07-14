@@ -24,7 +24,8 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 
-import org.hl7.fhir.instance.model.IBaseResource;
+import org.hl7.fhir.instance.model.api.IAnyResource;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.model.api.Bundle;
@@ -40,6 +41,12 @@ import ca.uhn.fhir.model.api.TagList;
  */
 public interface IParser {
 
+	/**
+	 * Registers an error handler which will be invoked when any parse errors are found
+	 * @param theErrorHandler The error handler to set. Must not be null. 
+	 */
+	IParser setParserErrorHandler(IParserErrorHandler theErrorHandler);
+	
 	String encodeBundleToString(Bundle theBundle) throws DataFormatException;
 
 	void encodeBundleToWriter(Bundle theBundle, Writer theWriter) throws IOException, DataFormatException;
@@ -115,26 +122,28 @@ public interface IParser {
 	<T extends IBaseResource> T parseResource(Class<T> theResourceType, String theString) throws DataFormatException;
 
 	/**
-	 * Parses a resource
+	 * Parses a resource 
 	 * 
 	 * @param theReader
 	 *            The reader to parse input from. Note that the Reader will not be closed by the parser upon completion.
-	 * @return A parsed resource
+	 * @return A parsed resource. Note that the returned object will be an instance of {@link IResource} or {@link IAnyResource} 
+	 * depending on the specific FhirContext which created this parser.
 	 * @throws DataFormatException
 	 *             If the resource can not be parsed because the data is not recognized or invalid for any reason
 	 */
-	IResource parseResource(Reader theReader) throws ConfigurationException, DataFormatException;
+	IBaseResource parseResource(Reader theReader) throws ConfigurationException, DataFormatException;
 
 	/**
 	 * Parses a resource
 	 * 
 	 * @param theMessageString
 	 *            The string to parse
-	 * @return A parsed resource
+	 * @return A parsed resource. Note that the returned object will be an instance of {@link IResource} or {@link IAnyResource} 
+	 * depending on the specific FhirContext which created this parser.
 	 * @throws DataFormatException
 	 *             If the resource can not be parsed because the data is not recognized or invalid for any reason
 	 */
-	IResource parseResource(String theMessageString) throws ConfigurationException, DataFormatException;
+	IBaseResource parseResource(String theMessageString) throws ConfigurationException, DataFormatException;
 
 	/**
 	 * Parses a tag list, as defined in the <a href="http://hl7.org/implement/standards/fhir/http.html#tags">FHIR Specification</a>.
@@ -177,5 +186,48 @@ public interface IParser {
 	 * @return Returns an instance of <code>this</code> parser so that method calls can be chained together
 	 */
 	IParser setServerBaseUrl(String theUrl);
+
+	/**
+	 * If set to <code>true<code> (which is the default), resource references containing a version 
+	 * will have the version removed when the resource is encoded. This is generally good behaviour because
+	 * in most situations, references from one resource to another should be to the resource by ID, not
+	 * by ID and version. In some cases though, it may be desirable to preserve the version in resource
+	 * links. In that case, this value should be set to <code>false</code>.
+	 * 
+	 * @param theStripVersionsFromReferences Set this to <code>false<code> to prevent the parser from removing
+	 * resource versions from references.
+	 * @return Returns a reference to <code>this</code> parser so that method calls can be chained together
+	 */
+	IParser setStripVersionsFromReferences(boolean theStripVersionsFromReferences);
+	
+	/**
+	 * If set to <code>true<code> (which is the default), resource references containing a version 
+	 * will have the version removed when the resource is encoded. This is generally good behaviour because
+	 * in most situations, references from one resource to another should be to the resource by ID, not
+	 * by ID and version. In some cases though, it may be desirable to preserve the version in resource
+	 * links. In that case, this value should be set to <code>false</code>.
+	 * 
+	 * @return Returns the parser instance's configuration setting for stripping versions from resource references when encoding. Default is <code>true</code>.
+	 */
+	boolean isStripVersionsFromReferences();
+
+	/**
+	 * If set to <code>true</code> (default is <code>false</code>) the ID of any resources being encoded
+	 * will not be included in the output. Note that this does not apply to contained resources, only to root resources.
+	 * In other words, if this is set to <code>true</code>, contained resources will still have local IDs but the
+	 * outer/containing ID will not have an ID.
+	 * 
+	 * @param theOmitResourceId Should resource IDs be omitted
+	 * @return Returns a reference to <code>this</code> parser so that method calls can be chained together
+	 * @since 1.1
+	 */
+	IParser setOmitResourceId(boolean theOmitResourceId);
+
+	/**
+	 * Returns true if resource IDs should be omitted
+	 * @see #setOmitResourceId(boolean)
+	 * @since 1.1
+	 */
+	boolean isOmitResourceId();
 
 }

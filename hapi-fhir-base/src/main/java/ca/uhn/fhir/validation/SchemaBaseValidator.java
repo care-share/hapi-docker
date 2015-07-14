@@ -39,6 +39,7 @@ import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 
 import org.apache.commons.io.input.BOMInputStream;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.w3c.dom.ls.LSInput;
 import org.w3c.dom.ls.LSResourceResolver;
 import org.xml.sax.SAXException;
@@ -48,8 +49,7 @@ import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.model.api.Bundle;
-import ca.uhn.fhir.model.api.IResource;
-import ca.uhn.fhir.model.base.resource.BaseOperationOutcome.BaseIssue;
+import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 
 class SchemaBaseValidator implements IValidator {
@@ -76,16 +76,19 @@ class SchemaBaseValidator implements IValidator {
 		myCtx = theContext;
 	}
 
-	private void doValidate(ValidationContext<?> theContext, String schemaName) {
+	private void doValidate(IValidationContext<?> theContext, String schemaName) {
 		Schema schema = loadSchema("dstu", schemaName);
 
 		try {
 			Validator validator = schema.newValidator();
 			MyErrorHandler handler = new MyErrorHandler(theContext);
 			validator.setErrorHandler(handler);
-			String encodedResource = theContext.getXmlEncodedResource();
-
-			// ourLog.info(new FhirContext().newXmlParser().setPrettyPrint(true).encodeBundleToString((Bundle) theContext.getResource()));
+			String encodedResource;
+			if (theContext.getResourceAsStringEncoding() == EncodingEnum.XML) {
+				encodedResource = theContext.getResourceAsString();
+			} else {
+				encodedResource = theContext.getFhirContext().newXmlParser().encodeResourceToString((IBaseResource) theContext.getResource());
+			}
 
 			validator.validate(new StreamSource(new StringReader(encodedResource)));
 		} catch (SAXException e) {
@@ -105,10 +108,10 @@ class SchemaBaseValidator implements IValidator {
 				return schema;
 			}
 
-			Source baseSource = loadXml("dstu", null, theSchemaName);
+			Source baseSource = loadXml(null, theSchemaName);
 
 			SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-			schemaFactory.setResourceResolver(new MyResourceResolver("dstu"));
+			schemaFactory.setResourceResolver(new MyResourceResolver());
 
 			try {
 				schema = schemaFactory.newSchema(new Source[] { baseSource });
@@ -120,33 +123,22 @@ class SchemaBaseValidator implements IValidator {
 		}
 	}
 
-	private Source loadXml(String theVersion, String theSystemId, String theSchemaName) {
+	private Source loadXml(String theSystemId, String theSchemaName) {
 		String pathToBase = myCtx.getVersion().getPathToSchemaDefinitions() + '/' + theSchemaName;
 		ourLog.debug("Going to load resource: {}", pathToBase);
-		InputStream baseIs = FhirValidator.class.getClassLoader().getResourceAsStream(pathToBase);
+		InputStream baseIs = FhirValidator.class.getResourceAsStream(pathToBase);
 		if (baseIs == null) {
 			throw new InternalErrorException("No FHIR-BASE schema found");
 		}
-		 baseIs = new BOMInputStream(baseIs, false);
-		 InputStreamReader baseReader = new InputStreamReader(baseIs, Charset.forName("UTF-8"));
-		 Source baseSource = new StreamSource(baseReader, theSystemId);
+		baseIs = new BOMInputStream(baseIs, false);
+		InputStreamReader baseReader = new InputStreamReader(baseIs, Charset.forName("UTF-8"));
+		Source baseSource = new StreamSource(baseReader, theSystemId);
 
-//		String schema;
-//		try {
-//			schema = IOUtils.toString(baseIs, Charset.forName("UTF-8"));
-//		} catch (IOException e) {
-//			throw new InternalErrorException(e);
-//		}
-//
-//		ourLog.info("Schema is:\n{}", schema);
-//		
-//		Source baseSource = new StreamSource(new StringReader(schema), theSystemId);
-//		Source baseSource = new StreamSource(baseIs, theSystemId);
 		return baseSource;
 	}
 
 	@Override
-	public void validateBundle(ValidationContext<Bundle> theContext) {
+	public void validateBundle(IValidationContext<Bundle> theContext) {
 		if (myCtx.getVersion().getVersion().isNewerThan(FhirVersionEnum.DSTU1)) {
 			doValidate(theContext, "fhir-single.xsd");
 		} else {
@@ -155,47 +147,46 @@ class SchemaBaseValidator implements IValidator {
 	}
 
 	@Override
-	public void validateResource(ValidationContext<IResource> theContext) {
+	public void validateResource(IValidationContext<IBaseResource> theContext) {
 		doValidate(theContext, "fhir-single.xsd");
 	}
 
 	private static class MyErrorHandler implements org.xml.sax.ErrorHandler {
 
-		private ValidationContext<?> myContext;
+		private IValidationContext<?> myContext;
 
-		public MyErrorHandler(ValidationContext<?> theContext) {
+		public MyErrorHandler(IValidationContext<?> theContext) {
 			myContext = theContext;
 		}
 
-		private void addIssue(SAXParseException theException, String severity) {
-			BaseIssue issue = myContext.getOperationOutcome().addIssue();
-			issue.getSeverityElement().setValue(severity);
-			issue.getDetailsElement().setValue(theException.getLocalizedMessage());
-			issue.addLocation("Line[" + theException.getLineNumber() + "] Col[" + theException.getColumnNumber() + "]");
+		private void addIssue(SAXParseException theException, ResultSeverityEnum theSeverity) {
+			SingleValidationMessage message = new SingleValidationMessage();
+			message.setLocationRow(theException.getLineNumber());
+			message.setLocationCol(theException.getColumnNumber());
+			message.setMessage(theException.getLocalizedMessage());
+			message.setSeverity(theSeverity);
+			myContext.addValidationMessage(message);
 		}
 
 		@Override
-		public void error(SAXParseException theException) throws SAXException {
-			addIssue(theException, "error");
+		public void error(SAXParseException theException) {
+			addIssue(theException, ResultSeverityEnum.ERROR);
 		}
 
 		@Override
-		public void fatalError(SAXParseException theException) throws SAXException {
-			addIssue(theException, "fatal");
+		public void fatalError(SAXParseException theException) {
+			addIssue(theException, ResultSeverityEnum.FATAL);
 		}
 
 		@Override
-		public void warning(SAXParseException theException) throws SAXException {
-			addIssue(theException, "warning");
+		public void warning(SAXParseException theException) {
+			addIssue(theException, ResultSeverityEnum.WARNING);
 		}
 
 	}
 
 	private final class MyResourceResolver implements LSResourceResolver {
-		private String myVersion;
-
-		private MyResourceResolver(String theVersion) {
-			myVersion = theVersion;
+		private MyResourceResolver() {
 		}
 
 		@Override
@@ -205,12 +196,12 @@ class SchemaBaseValidator implements IValidator {
 				input.setPublicId(thePublicId);
 				input.setSystemId(theSystemId);
 				input.setBaseURI(theBaseURI);
-//				String pathToBase = "ca/uhn/fhir/model/" + myVersion + "/schema/" + theSystemId;
+				// String pathToBase = "ca/uhn/fhir/model/" + myVersion + "/schema/" + theSystemId;
 				String pathToBase = myCtx.getVersion().getPathToSchemaDefinitions() + '/' + theSystemId;
 
 				ourLog.debug("Loading referenced schema file: " + pathToBase);
 
-				InputStream baseIs = FhirValidator.class.getClassLoader().getResourceAsStream(pathToBase);
+				InputStream baseIs = FhirValidator.class.getResourceAsStream(pathToBase);
 				if (baseIs == null) {
 					throw new InternalErrorException("Schema file not found: " + pathToBase);
 				}
