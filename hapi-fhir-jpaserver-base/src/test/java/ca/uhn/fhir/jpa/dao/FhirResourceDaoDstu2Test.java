@@ -87,6 +87,7 @@ import ca.uhn.fhir.rest.param.NumberParam;
 import ca.uhn.fhir.rest.param.QuantityParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.StringParam;
+import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IBundleProvider;
@@ -1874,6 +1875,80 @@ public class FhirResourceDaoDstu2Test extends BaseJpaTest {
 	}
 
 	@Test
+	public void testSearchWithTagParameter() {
+		String methodName = "testSearchWithTagParameter";
+		
+		IIdType tag1id;
+		{
+			Organization org = new Organization();
+			org.getNameElement().setValue("FOO");
+			TagList tagList = new TagList();
+			tagList.addTag("urn:taglist", methodName + "1a");
+			tagList.addTag("urn:taglist", methodName + "1b");
+			ResourceMetadataKeyEnum.TAG_LIST.put(org, tagList);
+			tag1id = ourOrganizationDao.create(org).getId().toUnqualifiedVersionless();
+		}
+		IIdType tag2id;
+		{
+			Organization org = new Organization();
+			org.getNameElement().setValue("FOO");
+			TagList tagList = new TagList();
+			tagList.addTag("urn:taglist", methodName + "2a");
+			tagList.addTag("urn:taglist", methodName + "2b");
+			ResourceMetadataKeyEnum.TAG_LIST.put(org, tagList);
+			tag2id = ourOrganizationDao.create(org).getId().toUnqualifiedVersionless();
+		}
+
+		{
+			// One tag
+			SearchParameterMap params = new SearchParameterMap();
+			params.add("_tag", new TokenParam("urn:taglist", methodName + "1a"));
+			List<IIdType> patients = toUnqualifiedVersionlessIds(ourOrganizationDao.search(params));
+			assertThat(patients, containsInAnyOrder(tag1id));
+		}
+		{
+			// Code only
+			SearchParameterMap params = new SearchParameterMap();
+			params.add("_tag", new TokenParam(null, methodName + "1a"));
+			List<IIdType> patients = toUnqualifiedVersionlessIds(ourOrganizationDao.search(params));
+			assertThat(patients, containsInAnyOrder(tag1id));
+		}
+		{
+			// Or tags
+			SearchParameterMap params = new SearchParameterMap();
+			TokenOrListParam orListParam = new TokenOrListParam();
+			orListParam.add(new TokenParam("urn:taglist", methodName + "1a"));
+			orListParam.add(new TokenParam("urn:taglist", methodName + "2a"));
+			params.add("_tag", orListParam);
+			List<IIdType> patients = toUnqualifiedVersionlessIds(ourOrganizationDao.search(params));
+			assertThat(patients, containsInAnyOrder(tag1id, tag2id));
+		}
+		// TODO: get multiple/AND working
+		{
+			// And tags
+			SearchParameterMap params = new SearchParameterMap();
+			TokenAndListParam andListParam = new TokenAndListParam();
+			andListParam.addValue(new TokenOrListParam("urn:taglist", methodName + "1a"));
+			andListParam.addValue(new TokenOrListParam("urn:taglist", methodName + "2a"));
+			params.add("_tag", andListParam);
+			List<IIdType> patients = toUnqualifiedVersionlessIds(ourOrganizationDao.search(params));
+			assertEquals(0, patients.size());
+		}
+
+		{
+			// And tags
+			SearchParameterMap params = new SearchParameterMap();
+			TokenAndListParam andListParam = new TokenAndListParam();
+			andListParam.addValue(new TokenOrListParam("urn:taglist", methodName + "1a"));
+			andListParam.addValue(new TokenOrListParam("urn:taglist", methodName + "1b"));
+			params.add("_tag", andListParam);
+			List<IIdType> patients = toUnqualifiedVersionlessIds(ourOrganizationDao.search(params));
+			assertThat(patients, containsInAnyOrder(tag1id));
+		}
+
+	}
+
+	@Test
 	public void testSearchWithIncludes() {
 		IIdType parentOrgId;
 		{
@@ -2374,47 +2449,121 @@ public class FhirResourceDaoDstu2Test extends BaseJpaTest {
 		assertThat(actual.subList(2, 4), containsInAnyOrder(id1, id3));
 	}
 
+	/**
+	 * See #198
+	 */
 	@Test
-	public void testSortByString() {
+	public void testSortByString02() {
+		Patient p;
+		String string = "testSortByString02";
+
+		p = new Patient();
+		p.addIdentifier().setSystem("urn:system").setValue(string);
+		p.addName().addFamily("Fam1").addGiven("Giv1");
+		ourPatientDao.create(p).getId().toUnqualifiedVersionless();
+
+		p = new Patient();
+		p.addIdentifier().setSystem("urn:system").setValue(string);
+		p.addName().addFamily("Fam2").addGiven("Giv1");
+		ourPatientDao.create(p).getId().toUnqualifiedVersionless();
+
+		p = new Patient();
+		p.addIdentifier().setSystem("urn:system").setValue(string);
+		p.addName().addFamily("Fam2").addGiven("Giv2");
+		ourPatientDao.create(p).getId().toUnqualifiedVersionless();
+		
+		p = new Patient();
+		p.addIdentifier().setSystem("urn:system").setValue(string);
+		p.addName().addFamily("Fam1").addGiven("Giv2");
+		ourPatientDao.create(p).getId().toUnqualifiedVersionless();
+
+		SearchParameterMap pm;
+		List<String> names;
+		
+		pm = new SearchParameterMap();
+		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", string));
+		pm.setSort(new SortSpec(Patient.SP_FAMILY));
+		names = extractNames(ourPatientDao.search(pm));
+		ourLog.info("Names: {}", names);
+		assertThat(names.subList(0, 2), containsInAnyOrder("Giv1 Fam1", "Giv2 Fam1"));
+		assertThat(names.subList(2, 4), containsInAnyOrder("Giv1 Fam2", "Giv2 Fam2"));
+
+		pm = new SearchParameterMap();
+		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", string));
+		pm.setSort(new SortSpec(Patient.SP_FAMILY).setChain(new SortSpec(Patient.SP_GIVEN)));
+		names = extractNames(ourPatientDao.search(pm));
+		ourLog.info("Names: {}", names);
+		assertThat(names.subList(0, 2), contains("Giv1 Fam1", "Giv2 Fam1"));
+		assertThat(names.subList(2, 4), contains("Giv1 Fam2", "Giv2 Fam2"));
+
+		pm = new SearchParameterMap();
+		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", string));
+		pm.setSort(new SortSpec(Patient.SP_FAMILY).setChain(new SortSpec(Patient.SP_GIVEN, SortOrderEnum.DESC)));
+		names = extractNames(ourPatientDao.search(pm));
+		ourLog.info("Names: {}", names);
+		assertThat(names.subList(0, 2), contains("Giv2 Fam1", "Giv1 Fam1"));
+		assertThat(names.subList(2, 4), contains("Giv2 Fam2", "Giv1 Fam2"));
+
+		pm = new SearchParameterMap();
+		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", string));
+		pm.setSort(new SortSpec(Patient.SP_FAMILY, SortOrderEnum.DESC).setChain(new SortSpec(Patient.SP_GIVEN, SortOrderEnum.DESC)));
+		names = extractNames(ourPatientDao.search(pm));
+		ourLog.info("Names: {}", names);
+		assertThat(names.subList(0, 2), contains("Giv2 Fam2", "Giv1 Fam2"));
+		assertThat(names.subList(2, 4), contains("Giv2 Fam1", "Giv1 Fam1"));
+}
+	
+	private List<String> extractNames(IBundleProvider theSearch) {
+		ArrayList<String> retVal = new ArrayList<String>();
+		for (IBaseResource next : theSearch.getResources(0, theSearch.size())) {
+			Patient nextPt = (Patient)next;
+			retVal.add(nextPt.getNameFirstRep().getNameAsSingleString());
+		}
+		return retVal;
+	}
+
+	@Test
+	public void testSortByString01() {
 		Patient p = new Patient();
-		p.addIdentifier().setSystem("urn:system").setValue("testSortByString");
+		String string = "testSortByString01";
+		p.addIdentifier().setSystem("urn:system").setValue(string);
 		p.addName().addFamily("testSortF1").addGiven("testSortG1");
 		IIdType id1 = ourPatientDao.create(p).getId().toUnqualifiedVersionless();
 
 		// Create out of order
 		p = new Patient();
-		p.addIdentifier().setSystem("urn:system").setValue("testSortByString");
+		p.addIdentifier().setSystem("urn:system").setValue(string);
 		p.addName().addFamily("testSortF3").addGiven("testSortG3");
 		IIdType id3 = ourPatientDao.create(p).getId().toUnqualifiedVersionless();
 
 		p = new Patient();
-		p.addIdentifier().setSystem("urn:system").setValue("testSortByString");
+		p.addIdentifier().setSystem("urn:system").setValue(string);
 		p.addName().addFamily("testSortF2").addGiven("testSortG2");
 		IIdType id2 = ourPatientDao.create(p).getId().toUnqualifiedVersionless();
 
 		p = new Patient();
-		p.addIdentifier().setSystem("urn:system").setValue("testSortByString");
+		p.addIdentifier().setSystem("urn:system").setValue(string);
 		IIdType id4 = ourPatientDao.create(p).getId().toUnqualifiedVersionless();
 
 		SearchParameterMap pm;
 		List<IIdType> actual;
 
 		pm = new SearchParameterMap();
-		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", "testSortByString"));
+		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", string));
 		pm.setSort(new SortSpec(Patient.SP_FAMILY));
 		actual = toUnqualifiedVersionlessIds(ourPatientDao.search(pm));
 		assertEquals(4, actual.size());
 		assertThat(actual, contains(id1, id2, id3, id4));
 
 		pm = new SearchParameterMap();
-		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", "testSortByString"));
+		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", string));
 		pm.setSort(new SortSpec(Patient.SP_FAMILY).setOrder(SortOrderEnum.ASC));
 		actual = toUnqualifiedVersionlessIds(ourPatientDao.search(pm));
 		assertEquals(4, actual.size());
 		assertThat(actual, contains(id1, id2, id3, id4));
 
 		pm = new SearchParameterMap();
-		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", "testSortByString"));
+		pm.add(Patient.SP_IDENTIFIER, new TokenParam("urn:system", string));
 		pm.setSort(new SortSpec(Patient.SP_FAMILY).setOrder(SortOrderEnum.DESC));
 		actual = toUnqualifiedVersionlessIds(ourPatientDao.search(pm));
 		assertEquals(4, actual.size());

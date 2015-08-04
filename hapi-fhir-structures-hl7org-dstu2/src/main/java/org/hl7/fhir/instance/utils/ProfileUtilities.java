@@ -30,7 +30,6 @@ import org.hl7.fhir.instance.model.StringType;
 import org.hl7.fhir.instance.model.StructureDefinition;
 import org.hl7.fhir.instance.model.StructureDefinition.StructureDefinitionDifferentialComponent;
 import org.hl7.fhir.instance.model.StructureDefinition.StructureDefinitionSnapshotComponent;
-import org.hl7.fhir.instance.model.StructureDefinition.StructureDefinitionType;
 import org.hl7.fhir.instance.model.Type;
 import org.hl7.fhir.instance.model.UriType;
 import org.hl7.fhir.instance.utils.ProfileUtilities.ProfileKnowledgeProvider.BindingResolution;
@@ -626,7 +625,7 @@ public class ProfileUtilities {
         if (derived.getComments().startsWith("..."))
           base.setComments(base.getComments()+"\r\n"+derived.getComments().substring(3));
         else if (!Base.compareDeep(derived.getCommentsElement(), base.getCommentsElement(), false))
-          derived.setCommentsElement(null);
+          base.setCommentsElement(derived.getCommentsElement().copy());
         else if (trimDifferential)
           base.setCommentsElement(derived.getCommentsElement().copy());
         else if (derived.hasCommentsElement()) 
@@ -637,7 +636,7 @@ public class ProfileUtilities {
         if (derived.getRequirements().startsWith("..."))
           base.setRequirements(base.getRequirements()+"\r\n"+derived.getRequirements().substring(3));
         else if (!Base.compareDeep(derived.getRequirementsElement(), base.getRequirementsElement(), false))
-          derived.setRequirementsElement(null);
+          base.setRequirementsElement(derived.getRequirementsElement().copy());
         else if (trimDifferential)
           base.setRequirementsElement(derived.getRequirementsElement().copy());
         else if (derived.hasRequirementsElement()) 
@@ -1574,9 +1573,9 @@ public class ProfileUtilities {
   // generate schematroins for the rules in a structure definition
   
   public void generateSchematrons(OutputStream dest, StructureDefinition structure) throws Exception {
-    if (structure.getType() != StructureDefinitionType.CONSTRAINT)
-      throw new Exception("not the right kind of structure to generate schematrons for");
-      if (!structure.hasSnapshot())
+    if (!structure.hasConstrainedType())
+    	throw new Exception("not the right kind of structure to generate schematrons for");
+    if (!structure.hasSnapshot())
       throw new Exception("needs a snapshot");
     
   	StructureDefinition base = context.getProfiles().get(structure.getBase());

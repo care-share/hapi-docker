@@ -1,20 +1,22 @@
 package ca.uhn.fhir.validation;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.hl7.fhir.instance.model.Coding;
 import org.hl7.fhir.instance.model.Questionnaire;
+import org.hl7.fhir.instance.model.Questionnaire.AnswerFormat;
+import org.hl7.fhir.instance.model.Questionnaire.GroupComponent;
 import org.hl7.fhir.instance.model.QuestionnaireAnswers;
+import org.hl7.fhir.instance.model.QuestionnaireAnswers.QuestionnaireAnswersStatus;
 import org.hl7.fhir.instance.model.Reference;
 import org.hl7.fhir.instance.model.StringType;
 import org.hl7.fhir.instance.model.ValueSet;
-import org.hl7.fhir.instance.model.Questionnaire.AnswerFormat;
 import org.hl7.fhir.instance.utils.WorkerContext;
 import org.hl7.fhir.instance.validation.QuestionnaireAnswersValidator;
 import org.hl7.fhir.instance.validation.ValidationMessage;
@@ -54,6 +56,48 @@ public class QuestionnaireAnswersValidatorTest {
 		assertThat(errors.toString(), containsString("Answer to question with linkId[link0] found of type [StringType] but this is invalid for question of type [boolean]"));
 	}
 
+	
+	@Test
+	public void testGroupWithNoLinkIdInQuestionnaireAnswers() {
+		Questionnaire q = new Questionnaire();
+		GroupComponent qGroup = q.getGroup().addGroup();
+		qGroup.addQuestion().setLinkId("link0").setRequired(true).setType(AnswerFormat.BOOLEAN);
+		
+		QuestionnaireAnswers qa = new QuestionnaireAnswers();
+		qa.getQuestionnaire().setReference("http://example.com/Questionnaire/q1");
+		org.hl7.fhir.instance.model.QuestionnaireAnswers.GroupComponent qaGroup = qa.getGroup().addGroup();
+		qaGroup.addQuestion().setLinkId("link0").addAnswer().setValue(new StringType("FOO"));
+		
+		myWorkerCtx.getQuestionnaires().put(qa.getQuestionnaire().getReference(), q);
+		List<ValidationMessage> errors = new ArrayList<ValidationMessage>();
+		myVal.validate(errors, qa);
+		
+		ourLog.info(errors.toString());
+		assertThat(errors.toString(), containsString("Answer to question with linkId[link0] found of type [StringType] but this is invalid for question of type [boolean]"));
+	}
+
+	@Test
+	public void testMultipleGroupsWithNoLinkIdInQuestionnaireAnswers() {
+		Questionnaire q = new Questionnaire();
+		GroupComponent qGroup = q.getGroup().addGroup();
+		qGroup.addQuestion().setLinkId("link0").setRequired(true).setType(AnswerFormat.BOOLEAN);
+		GroupComponent qGroup2 = q.getGroup().addGroup();
+		qGroup2.addQuestion().setLinkId("link1").setRequired(true).setType(AnswerFormat.BOOLEAN);
+		
+		QuestionnaireAnswers qa = new QuestionnaireAnswers();
+		qa.getQuestionnaire().setReference("http://example.com/Questionnaire/q1");
+		org.hl7.fhir.instance.model.QuestionnaireAnswers.GroupComponent qaGroup = qa.getGroup().addGroup();
+		qaGroup.addQuestion().setLinkId("link0").addAnswer().setValue(new StringType("FOO"));
+		
+		myWorkerCtx.getQuestionnaires().put(qa.getQuestionnaire().getReference(), q);
+		List<ValidationMessage> errors = new ArrayList<ValidationMessage>();
+		myVal.validate(errors, qa);
+		
+		ourLog.info(errors.toString());
+		assertThat(errors.toString(), containsString("Questionnaire in invalid, unable to validate QuestionnaireAnswers: Multiple groups found at this position with linkId[]"));
+	}
+	
+	
 	@Test
 	public void testCodedAnswer() {
 		String questionnaireRef = "http://example.com/Questionnaire/q1";
@@ -63,7 +107,8 @@ public class QuestionnaireAnswersValidatorTest {
 		myWorkerCtx.getQuestionnaires().put(questionnaireRef, q);
 				
 		ValueSet options = new ValueSet();
-		options.getDefine().setSystem("urn:system").addConcept().setCode("code0");
+		options.getCodeSystem().setSystem("urn:system").addConcept().setCode("code0");
+		options.getCompose().addInclude().setSystem("urn:system2").addConcept().setCode("code2");
 		myWorkerCtx.getValueSets().put("http://somevalueset", options);
 		
 		QuestionnaireAnswers qa;
@@ -77,7 +122,14 @@ public class QuestionnaireAnswersValidatorTest {
 		errors = new ArrayList<ValidationMessage>();
 		myVal.validate(errors, qa);
 		assertEquals(errors.toString(), 0, errors.size());
-		
+
+		qa = new QuestionnaireAnswers();
+		qa.getQuestionnaire().setReference(questionnaireRef);
+		qa.getGroup().addQuestion().setLinkId("link0").addAnswer().setValue(new Coding().setSystem("urn:system2").setCode("code2"));
+		errors = new ArrayList<ValidationMessage>();
+		myVal.validate(errors, qa);
+		assertEquals(errors.toString(), 0, errors.size());
+
 		// Bad code
 		
 		qa = new QuestionnaireAnswers();
@@ -86,8 +138,19 @@ public class QuestionnaireAnswersValidatorTest {
 		errors = new ArrayList<ValidationMessage>();
 		myVal.validate(errors, qa);
 		ourLog.info(errors.toString());
-		assertThat(errors.toString(), containsString("location=QuestionnaireAnswers.group(0).question(0).answer(0)"));
+		assertThat(errors.toString(), containsString("location=//QuestionnaireAnswers/group[0]/question[0]/answer[0]"));
 		assertThat(errors.toString(), containsString("message=Question with linkId[link0] has answer with system[urn:system] and code[code1] but this is not a valid answer for ValueSet[http://somevalueset]"));
+		
+		qa = new QuestionnaireAnswers();
+		
+		qa.getQuestionnaire().setReference(questionnaireRef);
+		qa.getGroup().addQuestion().setLinkId("link0").addAnswer().setValue(new Coding().setSystem("urn:system2").setCode("code3"));
+		errors = new ArrayList<ValidationMessage>();
+		myVal.validate(errors, qa);
+		ourLog.info(errors.toString());
+		assertThat(errors.toString(), containsString("location=//QuestionnaireAnswers/group[0]/question[0]/answer[0]"));
+		assertThat(errors.toString(), containsString("message=Question with linkId[link0] has answer with system[urn:system2] and code[code3] but this is not a valid answer for ValueSet[http://somevalueset]"));
+		
 	}
 
 
@@ -99,6 +162,7 @@ public class QuestionnaireAnswersValidatorTest {
 		q.getGroup().addQuestion().setLinkId("link1").setRequired(true).setType(AnswerFormat.STRING);
 		
 		QuestionnaireAnswers qa = new QuestionnaireAnswers();
+		qa.setStatus(QuestionnaireAnswersStatus.COMPLETED);
 		qa.getQuestionnaire().setReference("http://example.com/Questionnaire/q1");
 		qa.getGroup().addQuestion().setLinkId("link1").addAnswer().setValue(new StringType("FOO"));
 		
@@ -124,7 +188,7 @@ public class QuestionnaireAnswersValidatorTest {
 		myVal.validate(errors, qa);
 		
 		ourLog.info(errors.toString());
-		assertThat(errors.toString(), containsString("location=QuestionnaireAnswers.group(0).question"));
+		assertThat(errors.toString(), containsString("location=//QuestionnaireAnswers/group[0]/question[0]"));
 		assertThat(errors.toString(), containsString("message=Found answer with linkId[link1] but this ID is not allowed at this position"));
 	}
 	
@@ -142,7 +206,7 @@ public class QuestionnaireAnswersValidatorTest {
 		myVal.validate(errors, qa);
 		
 		ourLog.info(errors.toString());
-		assertThat(errors.toString(), containsString("location=QuestionnaireAnswers.group(0).group(0)"));
+		assertThat(errors.toString(), containsString("location=//QuestionnaireAnswers/group[0]/group[0]"));
 		assertThat(errors.toString(), containsString("Group with linkId[link1] found at this position, but this group does not exist at this position in Questionnaire"));
 	}
 

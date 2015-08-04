@@ -21,6 +21,7 @@ package ca.uhn.fhir.rest.method;
  */
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -33,6 +34,7 @@ import org.hl7.fhir.instance.model.api.IPrimitiveType;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition.IAccessor;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
+import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeChildPrimitiveDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimePrimitiveDatatypeDefinition;
@@ -40,6 +42,7 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.i18n.HapiLocalizer;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
+import ca.uhn.fhir.rest.api.ValidationModeEnum;
 import ca.uhn.fhir.rest.param.CollectionBinder;
 import ca.uhn.fhir.rest.param.ResourceParameter;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
@@ -57,17 +60,19 @@ public class OperationParameter implements IParameter {
 	private final String myName;
 	private final String myOperationName;
 	private Class<?> myParameterType;
-	private RestSearchParameterTypeEnum myParamType;
+	private String myParamType;
+	private FhirContext myContext;
 
-	public OperationParameter(String theOperationName, OperationParam theOperationParam) {
-		this(theOperationName, theOperationParam.name(), theOperationParam.min(), theOperationParam.max());
+	public OperationParameter(FhirContext theCtx, String theOperationName, OperationParam theOperationParam) {
+		this(theCtx, theOperationName, theOperationParam.name(), theOperationParam.min(), theOperationParam.max());
 	}
 
-	OperationParameter(String theOperationName, String theParameterName, int theMin, int theMax) {
+	OperationParameter(FhirContext theCtx, String theOperationName, String theParameterName, int theMin, int theMax) {
 		myOperationName = theOperationName;
 		myName = theParameterName;
 		myMin = theMin;
 		myMax = theMax;
+		myContext = theCtx;
 	}
 
 
@@ -84,10 +89,11 @@ public class OperationParameter implements IParameter {
 		return myName;
 	}
 
-	public RestSearchParameterTypeEnum getParamType() {
+	public String getParamType() {
 		return myParamType;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void initializeTypes(Method theMethod, Class<? extends Collection<?>> theOuterCollectionType, Class<? extends Collection<?>> theInnerCollectionType, Class<?> theParameterType) {
 		myParameterType = theParameterType;
@@ -96,6 +102,23 @@ public class OperationParameter implements IParameter {
 		} else {
 			myMax = 1;
 		}
+		
+		/*
+		 * The parameter can be of type string for validation methods - This is a bit
+		 * weird. See ValidateDstu2Test. We should probably clean this up..
+		 */
+		if (!myParameterType.equals(IBase.class) && !myParameterType.equals(String.class)) {
+			if (IBaseResource.class.isAssignableFrom(myParameterType) && myParameterType.isInterface()) {
+				myParamType = "Resource";
+			} else if (!IBase.class.isAssignableFrom(myParameterType) || myParameterType.isInterface() || Modifier.isAbstract(myParameterType.getModifiers())) {
+				throw new ConfigurationException("Invalid type for @OperationParam: " + myParameterType.getName());
+			} else if (myParameterType.equals(ValidationModeEnum.class)) {
+				myParamType = "code";
+			} else {
+				myParamType = myContext.getElementDefinition((Class<? extends IBase>) myParameterType).getName();
+			}
+		}
+
 	}
 
 	public OperationParameter setConverter(IConverter theConverter) {

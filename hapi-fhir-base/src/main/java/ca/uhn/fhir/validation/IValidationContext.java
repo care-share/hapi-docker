@@ -23,7 +23,7 @@ package ca.uhn.fhir.validation;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.EncodingEnum;
 
-interface IValidationContext<T> {
+public interface IValidationContext<T> {
 
 	FhirContext getFhirContext();
 
@@ -32,8 +32,6 @@ interface IValidationContext<T> {
 	String getResourceAsString();
 
 	EncodingEnum getResourceAsStringEncoding();
-
-	String getResourceName();
 
 	void addValidationMessage(SingleValidationMessage theMessage);
 

@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  */
 
 /**
- * ResourceProvider methods tagged with @Destroy will be invoked when the RestfulServer is shut down.
+ * ResourceProvider methods tagged with {@link Destroy} will be invoked when the RestfulServer is shut down.
  * This is your chance to do any cleanup.
  */
 @Retention(RetentionPolicy.RUNTIME)

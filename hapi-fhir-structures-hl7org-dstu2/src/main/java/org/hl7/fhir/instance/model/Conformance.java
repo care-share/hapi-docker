@@ -29,7 +29,7 @@ package org.hl7.fhir.instance.model;
   
 */
 
-// Generated on Wed, Jul 8, 2015 17:35-0400 for FHIR v0.5.0
+// Generated on Tue, Jul 21, 2015 10:37-0400 for FHIR v0.5.0
 
 import java.util.*;
 
@@ -375,6 +375,276 @@ public class Conformance extends DomainResource implements IBaseConformance {
       }
     }
 
+    public enum ConditionalDeleteStatus {
+        /**
+         * No support for conditional deletes
+         */
+        NOTSUPPORTED, 
+        /**
+         * Conditional deletes are supported, but only single resources at a time
+         */
+        SINGLE, 
+        /**
+         * Conditional deletes are supported, and multiple resources can be deleted in a single interaction
+         */
+        MULTIPLE, 
+        /**
+         * added to help the parsers
+         */
+        NULL;
+        public static ConditionalDeleteStatus fromCode(String codeString) throws Exception {
+            if (codeString == null || "".equals(codeString))
+                return null;
+        if ("not-supported".equals(codeString))
+          return NOTSUPPORTED;
+        if ("single".equals(codeString))
+          return SINGLE;
+        if ("multiple".equals(codeString))
+          return MULTIPLE;
+        throw new Exception("Unknown ConditionalDeleteStatus code '"+codeString+"'");
+        }
+        public String toCode() {
+          switch (this) {
+            case NOTSUPPORTED: return "not-supported";
+            case SINGLE: return "single";
+            case MULTIPLE: return "multiple";
+            default: return "?";
+          }
+        }
+        public String getSystem() {
+          switch (this) {
+            case NOTSUPPORTED: return "http://hl7.org/fhir/conditional-delete-status";
+            case SINGLE: return "http://hl7.org/fhir/conditional-delete-status";
+            case MULTIPLE: return "http://hl7.org/fhir/conditional-delete-status";
+            default: return "?";
+          }
+        }
+        public String getDefinition() {
+          switch (this) {
+            case NOTSUPPORTED: return "No support for conditional deletes";
+            case SINGLE: return "Conditional deletes are supported, but only single resources at a time";
+            case MULTIPLE: return "Conditional deletes are supported, and multiple resources can be deleted in a single interaction";
+            default: return "?";
+          }
+        }
+        public String getDisplay() {
+          switch (this) {
+            case NOTSUPPORTED: return "Not Supported";
+            case SINGLE: return "Single Deletes Supported";
+            case MULTIPLE: return "Multiple Deletes Supported";
+            default: return "?";
+          }
+        }
+    }
+
+  public static class ConditionalDeleteStatusEnumFactory implements EnumFactory<ConditionalDeleteStatus> {
+    public ConditionalDeleteStatus fromCode(String codeString) throws IllegalArgumentException {
+      if (codeString == null || "".equals(codeString))
+            if (codeString == null || "".equals(codeString))
+                return null;
+        if ("not-supported".equals(codeString))
+          return ConditionalDeleteStatus.NOTSUPPORTED;
+        if ("single".equals(codeString))
+          return ConditionalDeleteStatus.SINGLE;
+        if ("multiple".equals(codeString))
+          return ConditionalDeleteStatus.MULTIPLE;
+        throw new IllegalArgumentException("Unknown ConditionalDeleteStatus code '"+codeString+"'");
+        }
+    public String toCode(ConditionalDeleteStatus code) {
+      if (code == ConditionalDeleteStatus.NOTSUPPORTED)
+        return "not-supported";
+      if (code == ConditionalDeleteStatus.SINGLE)
+        return "single";
+      if (code == ConditionalDeleteStatus.MULTIPLE)
+        return "multiple";
+      return "?";
+      }
+    }
+
+    public enum SearchModifierCode {
+        /**
+         * The search parameter returns resources that have a value or not
+         */
+        MISSING, 
+        /**
+         * The search parameter returns resources that have a value that exactly matches the supplied parameter (the whole string, including casing and accents)
+         */
+        EXACT, 
+        /**
+         * The search parameter returns resources that include the supplied parameter value anywhere within the field being searched
+         */
+        CONTAINS, 
+        /**
+         * The search parameter returns resources that do not contain a match
+         */
+        NOT, 
+        /**
+         * The search parameter is processed as a string that searches text associated with the code/value - either CodeableConcept.text, Coding.display, or Identifier.type.text
+         */
+        TEXT, 
+        /**
+         * The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is in the specified value set.
+         */
+        IN, 
+        /**
+         * The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is not in the specified value set
+         */
+        NOTIN, 
+        /**
+         * The search parameter tests whether the value in a resource is subsumed by the specified value (is-a, or heirarchical relationships)
+         */
+        BELOW, 
+        /**
+         * The search parameter tests whether the value in a resource subsumes the specified value (is-a, or heirarchical relationships)
+         */
+        ABOVE, 
+        /**
+         * The search parameter only applies to the Resource Type specified as a modifier (e.g. the modifier is not actually :type, but :Patient etc)
+         */
+        TYPE, 
+        /**
+         * added to help the parsers
+         */
+        NULL;
+        public static SearchModifierCode fromCode(String codeString) throws Exception {
+            if (codeString == null || "".equals(codeString))
+                return null;
+        if ("missing".equals(codeString))
+          return MISSING;
+        if ("exact".equals(codeString))
+          return EXACT;
+        if ("contains".equals(codeString))
+          return CONTAINS;
+        if ("not".equals(codeString))
+          return NOT;
+        if ("text".equals(codeString))
+          return TEXT;
+        if ("in".equals(codeString))
+          return IN;
+        if ("not-in".equals(codeString))
+          return NOTIN;
+        if ("below".equals(codeString))
+          return BELOW;
+        if ("above".equals(codeString))
+          return ABOVE;
+        if ("type".equals(codeString))
+          return TYPE;
+        throw new Exception("Unknown SearchModifierCode code '"+codeString+"'");
+        }
+        public String toCode() {
+          switch (this) {
+            case MISSING: return "missing";
+            case EXACT: return "exact";
+            case CONTAINS: return "contains";
+            case NOT: return "not";
+            case TEXT: return "text";
+            case IN: return "in";
+            case NOTIN: return "not-in";
+            case BELOW: return "below";
+            case ABOVE: return "above";
+            case TYPE: return "type";
+            default: return "?";
+          }
+        }
+        public String getSystem() {
+          switch (this) {
+            case MISSING: return "http://hl7.org/fhir/search-modifier-code";
+            case EXACT: return "http://hl7.org/fhir/search-modifier-code";
+            case CONTAINS: return "http://hl7.org/fhir/search-modifier-code";
+            case NOT: return "http://hl7.org/fhir/search-modifier-code";
+            case TEXT: return "http://hl7.org/fhir/search-modifier-code";
+            case IN: return "http://hl7.org/fhir/search-modifier-code";
+            case NOTIN: return "http://hl7.org/fhir/search-modifier-code";
+            case BELOW: return "http://hl7.org/fhir/search-modifier-code";
+            case ABOVE: return "http://hl7.org/fhir/search-modifier-code";
+            case TYPE: return "http://hl7.org/fhir/search-modifier-code";
+            default: return "?";
+          }
+        }
+        public String getDefinition() {
+          switch (this) {
+            case MISSING: return "The search parameter returns resources that have a value or not";
+            case EXACT: return "The search parameter returns resources that have a value that exactly matches the supplied parameter (the whole string, including casing and accents)";
+            case CONTAINS: return "The search parameter returns resources that include the supplied parameter value anywhere within the field being searched";
+            case NOT: return "The search parameter returns resources that do not contain a match";
+            case TEXT: return "The search parameter is processed as a string that searches text associated with the code/value - either CodeableConcept.text, Coding.display, or Identifier.type.text";
+            case IN: return "The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is in the specified value set.";
+            case NOTIN: return "The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is not in the specified value set";
+            case BELOW: return "The search parameter tests whether the value in a resource is subsumed by the specified value (is-a, or heirarchical relationships)";
+            case ABOVE: return "The search parameter tests whether the value in a resource subsumes the specified value (is-a, or heirarchical relationships)";
+            case TYPE: return "The search parameter only applies to the Resource Type specified as a modifier (e.g. the modifier is not actually :type, but :Patient etc)";
+            default: return "?";
+          }
+        }
+        public String getDisplay() {
+          switch (this) {
+            case MISSING: return "Missing";
+            case EXACT: return "Exact";
+            case CONTAINS: return "Contains";
+            case NOT: return "Not";
+            case TEXT: return "Text";
+            case IN: return "In";
+            case NOTIN: return "Not In";
+            case BELOW: return "Below";
+            case ABOVE: return "Above";
+            case TYPE: return "Type";
+            default: return "?";
+          }
+        }
+    }
+
+  public static class SearchModifierCodeEnumFactory implements EnumFactory<SearchModifierCode> {
+    public SearchModifierCode fromCode(String codeString) throws IllegalArgumentException {
+      if (codeString == null || "".equals(codeString))
+            if (codeString == null || "".equals(codeString))
+                return null;
+        if ("missing".equals(codeString))
+          return SearchModifierCode.MISSING;
+        if ("exact".equals(codeString))
+          return SearchModifierCode.EXACT;
+        if ("contains".equals(codeString))
+          return SearchModifierCode.CONTAINS;
+        if ("not".equals(codeString))
+          return SearchModifierCode.NOT;
+        if ("text".equals(codeString))
+          return SearchModifierCode.TEXT;
+        if ("in".equals(codeString))
+          return SearchModifierCode.IN;
+        if ("not-in".equals(codeString))
+          return SearchModifierCode.NOTIN;
+        if ("below".equals(codeString))
+          return SearchModifierCode.BELOW;
+        if ("above".equals(codeString))
+          return SearchModifierCode.ABOVE;
+        if ("type".equals(codeString))
+          return SearchModifierCode.TYPE;
+        throw new IllegalArgumentException("Unknown SearchModifierCode code '"+codeString+"'");
+        }
+    public String toCode(SearchModifierCode code) {
+      if (code == SearchModifierCode.MISSING)
+        return "missing";
+      if (code == SearchModifierCode.EXACT)
+        return "exact";
+      if (code == SearchModifierCode.CONTAINS)
+        return "contains";
+      if (code == SearchModifierCode.NOT)
+        return "not";
+      if (code == SearchModifierCode.TEXT)
+        return "text";
+      if (code == SearchModifierCode.IN)
+        return "in";
+      if (code == SearchModifierCode.NOTIN)
+        return "not-in";
+      if (code == SearchModifierCode.BELOW)
+        return "below";
+      if (code == SearchModifierCode.ABOVE)
+        return "above";
+      if (code == SearchModifierCode.TYPE)
+        return "type";
+      return "?";
+      }
+    }
+
     public enum SystemRestfulInteraction {
         /**
          * null
@@ -457,6 +727,106 @@ public class Conformance extends DomainResource implements IBaseConformance {
         return "search-system";
       if (code == SystemRestfulInteraction.HISTORYSYSTEM)
         return "history-system";
+      return "?";
+      }
+    }
+
+    public enum TransactionMode {
+        /**
+         * Neither Batch or Transaction supported
+         */
+        NOTSUPPORTED, 
+        /**
+         * Batches supported
+         */
+        BATCH, 
+        /**
+         * Transactions Supported
+         */
+        TRANSACTION, 
+        /**
+         * Both Batches and Transactions Supported
+         */
+        BOTH, 
+        /**
+         * added to help the parsers
+         */
+        NULL;
+        public static TransactionMode fromCode(String codeString) throws Exception {
+            if (codeString == null || "".equals(codeString))
+                return null;
+        if ("not-supported".equals(codeString))
+          return NOTSUPPORTED;
+        if ("batch".equals(codeString))
+          return BATCH;
+        if ("transaction".equals(codeString))
+          return TRANSACTION;
+        if ("both".equals(codeString))
+          return BOTH;
+        throw new Exception("Unknown TransactionMode code '"+codeString+"'");
+        }
+        public String toCode() {
+          switch (this) {
+            case NOTSUPPORTED: return "not-supported";
+            case BATCH: return "batch";
+            case TRANSACTION: return "transaction";
+            case BOTH: return "both";
+            default: return "?";
+          }
+        }
+        public String getSystem() {
+          switch (this) {
+            case NOTSUPPORTED: return "http://hl7.org/fhir/transaction-mode";
+            case BATCH: return "http://hl7.org/fhir/transaction-mode";
+            case TRANSACTION: return "http://hl7.org/fhir/transaction-mode";
+            case BOTH: return "http://hl7.org/fhir/transaction-mode";
+            default: return "?";
+          }
+        }
+        public String getDefinition() {
+          switch (this) {
+            case NOTSUPPORTED: return "Neither Batch or Transaction supported";
+            case BATCH: return "Batches supported";
+            case TRANSACTION: return "Transactions Supported";
+            case BOTH: return "Both Batches and Transactions Supported";
+            default: return "?";
+          }
+        }
+        public String getDisplay() {
+          switch (this) {
+            case NOTSUPPORTED: return "None";
+            case BATCH: return "Batches supported";
+            case TRANSACTION: return "Transactions Supported";
+            case BOTH: return "Batches & Transactions";
+            default: return "?";
+          }
+        }
+    }
+
+  public static class TransactionModeEnumFactory implements EnumFactory<TransactionMode> {
+    public TransactionMode fromCode(String codeString) throws IllegalArgumentException {
+      if (codeString == null || "".equals(codeString))
+            if (codeString == null || "".equals(codeString))
+                return null;
+        if ("not-supported".equals(codeString))
+          return TransactionMode.NOTSUPPORTED;
+        if ("batch".equals(codeString))
+          return TransactionMode.BATCH;
+        if ("transaction".equals(codeString))
+          return TransactionMode.TRANSACTION;
+        if ("both".equals(codeString))
+          return TransactionMode.BOTH;
+        throw new IllegalArgumentException("Unknown TransactionMode code '"+codeString+"'");
+        }
+    public String toCode(TransactionMode code) {
+      if (code == TransactionMode.NOTSUPPORTED)
+        return "not-supported";
+      if (code == TransactionMode.BATCH)
+        return "batch";
+      if (code == TransactionMode.TRANSACTION)
+        return "transaction";
+      if (code == TransactionMode.BOTH)
+        return "both";
       return "?";
       }
     }
@@ -1284,27 +1654,34 @@ public class Conformance extends DomainResource implements IBaseConformance {
         protected List<SystemInteractionComponent> interaction;
 
         /**
+         * A code that indicates how transactions are supported.
+         */
+        @Child(name = "transactionMode", type = {CodeType.class}, order=6, min=0, max=1)
+        @Description(shortDefinition="not-supported | batch | transaction | both", formalDefinition="A code that indicates how transactions are supported." )
+        protected Enumeration<TransactionMode> transactionMode;
+
+        /**
          * Definition of an operation or a named query and with its parameters and their meaning and type.
          */
-        @Child(name = "operation", type = {}, order=6, min=0, max=Child.MAX_UNLIMITED)
+        @Child(name = "operation", type = {}, order=7, min=0, max=Child.MAX_UNLIMITED)
         @Description(shortDefinition="Definition of an operation or a custom query", formalDefinition="Definition of an operation or a named query and with its parameters and their meaning and type." )
         protected List<ConformanceRestOperationComponent> operation;
 
         /**
          * A list of absolute URIs that identify profiles that this server implements for accepting documents in the mailbox. If this list is empty, then documents are not accepted. The base specification has the profile identifier "http://hl7.org/fhir/documents/mailbox". Other specifications can declare their own identifier for this purpose.
          */
-        @Child(name = "documentMailbox", type = {UriType.class}, order=7, min=0, max=Child.MAX_UNLIMITED)
+        @Child(name = "documentMailbox", type = {UriType.class}, order=8, min=0, max=Child.MAX_UNLIMITED)
         @Description(shortDefinition="How documents are accepted in /Mailbox", formalDefinition="A list of absolute URIs that identify profiles that this server implements for accepting documents in the mailbox. If this list is empty, then documents are not accepted. The base specification has the profile identifier 'http://hl7.org/fhir/documents/mailbox'. Other specifications can declare their own identifier for this purpose." )
         protected List<UriType> documentMailbox;
 
         /**
          * An absolute URI which is a reference to the definition of a compartment hosted by the system.
          */
-        @Child(name = "compartment", type = {UriType.class}, order=8, min=0, max=Child.MAX_UNLIMITED)
+        @Child(name = "compartment", type = {UriType.class}, order=9, min=0, max=Child.MAX_UNLIMITED)
         @Description(shortDefinition="Compartments served/used by system", formalDefinition="An absolute URI which is a reference to the definition of a compartment hosted by the system." )
         protected List<UriType> compartment;
 
-        private static final long serialVersionUID = -535980615L;
+        private static final long serialVersionUID = 471286912L;
 
     /*
      * Constructor
@@ -1520,6 +1897,55 @@ public class Conformance extends DomainResource implements IBaseConformance {
         }
 
         /**
+         * @return {@link #transactionMode} (A code that indicates how transactions are supported.). This is the underlying object with id, value and extensions. The accessor "getTransactionMode" gives direct access to the value
+         */
+        public Enumeration<TransactionMode> getTransactionModeElement() { 
+          if (this.transactionMode == null)
+            if (Configuration.errorOnAutoCreate())
+              throw new Error("Attempt to auto-create ConformanceRestComponent.transactionMode");
+            else if (Configuration.doAutoCreate())
+              this.transactionMode = new Enumeration<TransactionMode>(new TransactionModeEnumFactory()); // bb
+          return this.transactionMode;
+        }
+
+        public boolean hasTransactionModeElement() { 
+          return this.transactionMode != null && !this.transactionMode.isEmpty();
+        }
+
+        public boolean hasTransactionMode() { 
+          return this.transactionMode != null && !this.transactionMode.isEmpty();
+        }
+
+        /**
+         * @param value {@link #transactionMode} (A code that indicates how transactions are supported.). This is the underlying object with id, value and extensions. The accessor "getTransactionMode" gives direct access to the value
+         */
+        public ConformanceRestComponent setTransactionModeElement(Enumeration<TransactionMode> value) { 
+          this.transactionMode = value;
+          return this;
+        }
+
+        /**
+         * @return A code that indicates how transactions are supported.
+         */
+        public TransactionMode getTransactionMode() { 
+          return this.transactionMode == null ? null : this.transactionMode.getValue();
+        }
+
+        /**
+         * @param value A code that indicates how transactions are supported.
+         */
+        public ConformanceRestComponent setTransactionMode(TransactionMode value) { 
+          if (value == null)
+            this.transactionMode = null;
+          else {
+            if (this.transactionMode == null)
+              this.transactionMode = new Enumeration<TransactionMode>(new TransactionModeEnumFactory());
+            this.transactionMode.setValue(value);
+          }
+          return this;
+        }
+
+        /**
          * @return {@link #operation} (Definition of an operation or a named query and with its parameters and their meaning and type.)
          */
         public List<ConformanceRestOperationComponent> getOperation() { 
@@ -1674,6 +2100,7 @@ public class Conformance extends DomainResource implements IBaseConformance {
           childrenList.add(new Property("security", "", "Information about security implementation from an interface perspective - what a client needs to know.", 0, java.lang.Integer.MAX_VALUE, security));
           childrenList.add(new Property("resource", "", "A specification of the restful capabilities of the solution for a specific resource type.", 0, java.lang.Integer.MAX_VALUE, resource));
           childrenList.add(new Property("interaction", "", "A specification of restful operations supported by the system.", 0, java.lang.Integer.MAX_VALUE, interaction));
+          childrenList.add(new Property("transactionMode", "code", "A code that indicates how transactions are supported.", 0, java.lang.Integer.MAX_VALUE, transactionMode));
           childrenList.add(new Property("operation", "", "Definition of an operation or a named query and with its parameters and their meaning and type.", 0, java.lang.Integer.MAX_VALUE, operation));
           childrenList.add(new Property("documentMailbox", "uri", "A list of absolute URIs that identify profiles that this server implements for accepting documents in the mailbox. If this list is empty, then documents are not accepted. The base specification has the profile identifier 'http://hl7.org/fhir/documents/mailbox'. Other specifications can declare their own identifier for this purpose.", 0, java.lang.Integer.MAX_VALUE, documentMailbox));
           childrenList.add(new Property("compartment", "uri", "An absolute URI which is a reference to the definition of a compartment hosted by the system.", 0, java.lang.Integer.MAX_VALUE, compartment));
@@ -1695,6 +2122,7 @@ public class Conformance extends DomainResource implements IBaseConformance {
           for (SystemInteractionComponent i : interaction)
             dst.interaction.add(i.copy());
         };
+        dst.transactionMode = transactionMode == null ? null : transactionMode.copy();
         if (operation != null) {
           dst.operation = new ArrayList<ConformanceRestOperationComponent>();
           for (ConformanceRestOperationComponent i : operation)
@@ -1721,9 +2149,9 @@ public class Conformance extends DomainResource implements IBaseConformance {
           return false;
         ConformanceRestComponent o = (ConformanceRestComponent) other;
         return compareDeep(mode, o.mode, true) && compareDeep(documentation, o.documentation, true) && compareDeep(security, o.security, true)
-           && compareDeep(resource, o.resource, true) && compareDeep(interaction, o.interaction, true) && compareDeep(operation, o.operation, true)
-           && compareDeep(documentMailbox, o.documentMailbox, true) && compareDeep(compartment, o.compartment, true)
-          ;
+           && compareDeep(resource, o.resource, true) && compareDeep(interaction, o.interaction, true) && compareDeep(transactionMode, o.transactionMode, true)
+           && compareDeep(operation, o.operation, true) && compareDeep(documentMailbox, o.documentMailbox, true)
+           && compareDeep(compartment, o.compartment, true);
       }
 
       @Override
@@ -1733,15 +2161,17 @@ public class Conformance extends DomainResource implements IBaseConformance {
         if (!(other instanceof ConformanceRestComponent))
           return false;
         ConformanceRestComponent o = (ConformanceRestComponent) other;
-        return compareValues(mode, o.mode, true) && compareValues(documentation, o.documentation, true) && compareValues(documentMailbox, o.documentMailbox, true)
-           && compareValues(compartment, o.compartment, true);
+        return compareValues(mode, o.mode, true) && compareValues(documentation, o.documentation, true) && compareValues(transactionMode, o.transactionMode, true)
+           && compareValues(documentMailbox, o.documentMailbox, true) && compareValues(compartment, o.compartment, true)
+          ;
       }
 
       public boolean isEmpty() {
         return super.isEmpty() && (mode == null || mode.isEmpty()) && (documentation == null || documentation.isEmpty())
            && (security == null || security.isEmpty()) && (resource == null || resource.isEmpty()) && (interaction == null || interaction.isEmpty())
-           && (operation == null || operation.isEmpty()) && (documentMailbox == null || documentMailbox.isEmpty())
-           && (compartment == null || compartment.isEmpty());
+           && (transactionMode == null || transactionMode.isEmpty()) && (operation == null || operation.isEmpty())
+           && (documentMailbox == null || documentMailbox.isEmpty()) && (compartment == null || compartment.isEmpty())
+          ;
       }
 
   }
@@ -2242,11 +2672,11 @@ public class Conformance extends DomainResource implements IBaseConformance {
         protected BooleanType conditionalUpdate;
 
         /**
-         * A flag that indicates that the server supports conditional delete.
+         * A code that indicates how the server supports conditional delete.
          */
-        @Child(name = "conditionalDelete", type = {BooleanType.class}, order=9, min=0, max=1)
-        @Description(shortDefinition="If allows/uses conditional delete", formalDefinition="A flag that indicates that the server supports conditional delete." )
-        protected BooleanType conditionalDelete;
+        @Child(name = "conditionalDelete", type = {CodeType.class}, order=9, min=0, max=1)
+        @Description(shortDefinition="not-supported | single | multiple - how conditional delete is supported", formalDefinition="A code that indicates how the server supports conditional delete." )
+        protected Enumeration<ConditionalDeleteStatus> conditionalDelete;
 
         /**
          * A list of _include values supported by the server.
@@ -2262,7 +2692,7 @@ public class Conformance extends DomainResource implements IBaseConformance {
         @Description(shortDefinition="Search params supported by implementation", formalDefinition="Search parameters for implementations to support and/or make use of - either references to ones defined in the specification, or additional ones defined for/by the implementation." )
         protected List<ConformanceRestResourceSearchParamComponent> searchParam;
 
-        private static final long serialVersionUID = -1390359673L;
+        private static final long serialVersionUID = -921508401L;
 
     /*
      * Constructor
@@ -2638,14 +3068,14 @@ public class Conformance extends DomainResource implements IBaseConformance {
         }
 
         /**
-         * @return {@link #conditionalDelete} (A flag that indicates that the server supports conditional delete.). This is the underlying object with id, value and extensions. The accessor "getConditionalDelete" gives direct access to the value
+         * @return {@link #conditionalDelete} (A code that indicates how the server supports conditional delete.). This is the underlying object with id, value and extensions. The accessor "getConditionalDelete" gives direct access to the value
          */
-        public BooleanType getConditionalDeleteElement() { 
+        public Enumeration<ConditionalDeleteStatus> getConditionalDeleteElement() { 
           if (this.conditionalDelete == null)
             if (Configuration.errorOnAutoCreate())
               throw new Error("Attempt to auto-create ConformanceRestResourceComponent.conditionalDelete");
             else if (Configuration.doAutoCreate())
-              this.conditionalDelete = new BooleanType(); // bb
+              this.conditionalDelete = new Enumeration<ConditionalDeleteStatus>(new ConditionalDeleteStatusEnumFactory()); // bb
           return this.conditionalDelete;
         }
 
@@ -2658,27 +3088,31 @@ public class Conformance extends DomainResource implements IBaseConformance {
         }
 
         /**
-         * @param value {@link #conditionalDelete} (A flag that indicates that the server supports conditional delete.). This is the underlying object with id, value and extensions. The accessor "getConditionalDelete" gives direct access to the value
+         * @param value {@link #conditionalDelete} (A code that indicates how the server supports conditional delete.). This is the underlying object with id, value and extensions. The accessor "getConditionalDelete" gives direct access to the value
          */
-        public ConformanceRestResourceComponent setConditionalDeleteElement(BooleanType value) { 
+        public ConformanceRestResourceComponent setConditionalDeleteElement(Enumeration<ConditionalDeleteStatus> value) { 
           this.conditionalDelete = value;
           return this;
         }
 
         /**
-         * @return A flag that indicates that the server supports conditional delete.
+         * @return A code that indicates how the server supports conditional delete.
          */
-        public boolean getConditionalDelete() { 
-          return this.conditionalDelete == null || this.conditionalDelete.isEmpty() ? false : this.conditionalDelete.getValue();
+        public ConditionalDeleteStatus getConditionalDelete() { 
+          return this.conditionalDelete == null ? null : this.conditionalDelete.getValue();
         }
 
         /**
-         * @param value A flag that indicates that the server supports conditional delete.
+         * @param value A code that indicates how the server supports conditional delete.
          */
-        public ConformanceRestResourceComponent setConditionalDelete(boolean value) { 
+        public ConformanceRestResourceComponent setConditionalDelete(ConditionalDeleteStatus value) { 
+          if (value == null)
+            this.conditionalDelete = null;
+          else {
             if (this.conditionalDelete == null)
-              this.conditionalDelete = new BooleanType();
+              this.conditionalDelete = new Enumeration<ConditionalDeleteStatus>(new ConditionalDeleteStatusEnumFactory());
             this.conditionalDelete.setValue(value);
+          }
           return this;
         }
 
@@ -2786,7 +3220,7 @@ public class Conformance extends DomainResource implements IBaseConformance {
           childrenList.add(new Property("updateCreate", "boolean", "A flag to indicate that the server allows or needs to allow the client to create new identities on the server (e.g. that is, the client PUTs to a location where there is no existing resource). Allowing this operation means that the server allows the client to create new identities on the server.", 0, java.lang.Integer.MAX_VALUE, updateCreate));
           childrenList.add(new Property("conditionalCreate", "boolean", "A flag that indicates that the server supports conditional create.", 0, java.lang.Integer.MAX_VALUE, conditionalCreate));
           childrenList.add(new Property("conditionalUpdate", "boolean", "A flag that indicates that the server supports conditional update.", 0, java.lang.Integer.MAX_VALUE, conditionalUpdate));
-          childrenList.add(new Property("conditionalDelete", "boolean", "A flag that indicates that the server supports conditional delete.", 0, java.lang.Integer.MAX_VALUE, conditionalDelete));
+          childrenList.add(new Property("conditionalDelete", "code", "A code that indicates how the server supports conditional delete.", 0, java.lang.Integer.MAX_VALUE, conditionalDelete));
           childrenList.add(new Property("searchInclude", "string", "A list of _include values supported by the server.", 0, java.lang.Integer.MAX_VALUE, searchInclude));
           childrenList.add(new Property("searchParam", "", "Search parameters for implementations to support and/or make use of - either references to ones defined in the specification, or additional ones defined for/by the implementation.", 0, java.lang.Integer.MAX_VALUE, searchParam));
         }
@@ -3065,13 +3499,20 @@ public class Conformance extends DomainResource implements IBaseConformance {
         protected List<CodeType> target;
 
         /**
+         * A modifier supported for the search parameter.
+         */
+        @Child(name = "modifier", type = {CodeType.class}, order=6, min=0, max=Child.MAX_UNLIMITED)
+        @Description(shortDefinition="missing | exact | contains | not | text | in | not-in | below | above | type", formalDefinition="A modifier supported for the search parameter." )
+        protected List<Enumeration<SearchModifierCode>> modifier;
+
+        /**
          * Chained names supported.
          */
-        @Child(name = "chain", type = {StringType.class}, order=6, min=0, max=Child.MAX_UNLIMITED)
+        @Child(name = "chain", type = {StringType.class}, order=7, min=0, max=Child.MAX_UNLIMITED)
         @Description(shortDefinition="Chained names supported", formalDefinition="Chained names supported." )
         protected List<StringType> chain;
 
-        private static final long serialVersionUID = 938312816L;
+        private static final long serialVersionUID = -1020405086L;
 
     /*
      * Constructor
@@ -3332,6 +3773,60 @@ public class Conformance extends DomainResource implements IBaseConformance {
         }
 
         /**
+         * @return {@link #modifier} (A modifier supported for the search parameter.)
+         */
+        public List<Enumeration<SearchModifierCode>> getModifier() { 
+          if (this.modifier == null)
+            this.modifier = new ArrayList<Enumeration<SearchModifierCode>>();
+          return this.modifier;
+        }
+
+        public boolean hasModifier() { 
+          if (this.modifier == null)
+            return false;
+          for (Enumeration<SearchModifierCode> item : this.modifier)
+            if (!item.isEmpty())
+              return true;
+          return false;
+        }
+
+        /**
+         * @return {@link #modifier} (A modifier supported for the search parameter.)
+         */
+    // syntactic sugar
+        public Enumeration<SearchModifierCode> addModifierElement() {//2 
+          Enumeration<SearchModifierCode> t = new Enumeration<SearchModifierCode>(new SearchModifierCodeEnumFactory());
+          if (this.modifier == null)
+            this.modifier = new ArrayList<Enumeration<SearchModifierCode>>();
+          this.modifier.add(t);
+          return t;
+        }
+
+        /**
+         * @param value {@link #modifier} (A modifier supported for the search parameter.)
+         */
+        public ConformanceRestResourceSearchParamComponent addModifier(SearchModifierCode value) { //1
+          Enumeration<SearchModifierCode> t = new Enumeration<SearchModifierCode>(new SearchModifierCodeEnumFactory());
+          t.setValue(value);
+          if (this.modifier == null)
+            this.modifier = new ArrayList<Enumeration<SearchModifierCode>>();
+          this.modifier.add(t);
+          return this;
+        }
+
+        /**
+         * @param value {@link #modifier} (A modifier supported for the search parameter.)
+         */
+        public boolean hasModifier(SearchModifierCode value) { 
+          if (this.modifier == null)
+            return false;
+          for (Enumeration<SearchModifierCode> v : this.modifier)
+            if (v.equals(value)) // code
+              return true;
+          return false;
+        }
+
+        /**
          * @return {@link #chain} (Chained names supported.)
          */
         public List<StringType> getChain() { 
@@ -3392,6 +3887,7 @@ public class Conformance extends DomainResource implements IBaseConformance {
           childrenList.add(new Property("type", "code", "The type of value a search parameter refers to, and how the content is interpreted.", 0, java.lang.Integer.MAX_VALUE, type));
           childrenList.add(new Property("documentation", "string", "This allows documentation of any distinct behaviors about how the search parameter is used.  For example, text matching algorithms.", 0, java.lang.Integer.MAX_VALUE, documentation));
           childrenList.add(new Property("target", "code", "Types of resource (if a resource is referenced).", 0, java.lang.Integer.MAX_VALUE, target));
+          childrenList.add(new Property("modifier", "code", "A modifier supported for the search parameter.", 0, java.lang.Integer.MAX_VALUE, modifier));
           childrenList.add(new Property("chain", "string", "Chained names supported.", 0, java.lang.Integer.MAX_VALUE, chain));
         }
 
@@ -3406,6 +3902,11 @@ public class Conformance extends DomainResource implements IBaseConformance {
           dst.target = new ArrayList<CodeType>();
           for (CodeType i : target)
             dst.target.add(i.copy());
+        };
+        if (modifier != null) {
+          dst.modifier = new ArrayList<Enumeration<SearchModifierCode>>();
+          for (Enumeration<SearchModifierCode> i : modifier)
+            dst.modifier.add(i.copy());
         };
         if (chain != null) {
           dst.chain = new ArrayList<StringType>();
@@ -3423,8 +3924,8 @@ public class Conformance extends DomainResource implements IBaseConformance {
           return false;
         ConformanceRestResourceSearchParamComponent o = (ConformanceRestResourceSearchParamComponent) other;
         return compareDeep(name, o.name, true) && compareDeep(definition, o.definition, true) && compareDeep(type, o.type, true)
-           && compareDeep(documentation, o.documentation, true) && compareDeep(target, o.target, true) && compareDeep(chain, o.chain, true)
-          ;
+           && compareDeep(documentation, o.documentation, true) && compareDeep(target, o.target, true) && compareDeep(modifier, o.modifier, true)
+           && compareDeep(chain, o.chain, true);
       }
 
       @Override
@@ -3435,14 +3936,15 @@ public class Conformance extends DomainResource implements IBaseConformance {
           return false;
         ConformanceRestResourceSearchParamComponent o = (ConformanceRestResourceSearchParamComponent) other;
         return compareValues(name, o.name, true) && compareValues(definition, o.definition, true) && compareValues(type, o.type, true)
-           && compareValues(documentation, o.documentation, true) && compareValues(target, o.target, true) && compareValues(chain, o.chain, true)
-          ;
+           && compareValues(documentation, o.documentation, true) && compareValues(target, o.target, true) && compareValues(modifier, o.modifier, true)
+           && compareValues(chain, o.chain, true);
       }
 
       public boolean isEmpty() {
         return super.isEmpty() && (name == null || name.isEmpty()) && (definition == null || definition.isEmpty())
            && (type == null || type.isEmpty()) && (documentation == null || documentation.isEmpty())
-           && (target == null || target.isEmpty()) && (chain == null || chain.isEmpty());
+           && (target == null || target.isEmpty()) && (modifier == null || modifier.isEmpty()) && (chain == null || chain.isEmpty())
+          ;
       }
 
   }

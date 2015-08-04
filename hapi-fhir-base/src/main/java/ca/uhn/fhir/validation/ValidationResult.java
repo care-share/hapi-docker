@@ -80,7 +80,9 @@ public class ValidationResult {
 	}
 
 	/**
-	 * @deprecated Use {@link #toOperationOutcome()} instead since this method returns a view
+	 * @deprecated Use {@link #toOperationOutcome()} instead since this method returns a view.
+	 *             {@link #toOperationOutcome()} is identical to this method, but has a more suitable name so this method
+	 *             will be removed at some point.
 	 */
 	@Deprecated
 	public IBaseOperationOutcome getOperationOutcome() {
@@ -96,8 +98,8 @@ public class ValidationResult {
 			String location;
 			if (isNotBlank(next.getLocationString())) {
 				location = next.getLocationString();
-			} else if (next.getLocationRow() != null || next.getLocationCol() != null) {
-				location = "Line[" + next.getLocationRow() + "] Col[" + next.getLocationCol() + "]";
+			} else if (next.getLocationLine() != null || next.getLocationCol() != null) {
+				location = "Line[" + next.getLocationLine() + "] Col[" + next.getLocationCol() + "]";
 			} else {
 				location = null;
 			}

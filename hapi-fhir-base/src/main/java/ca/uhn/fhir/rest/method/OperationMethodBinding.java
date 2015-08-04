@@ -25,6 +25,7 @@ import static org.apache.commons.lang3.StringUtils.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ import ca.uhn.fhir.model.dstu.valueset.RestfulOperationTypeEnum;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.model.valueset.BundleTypeEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
+import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.client.BaseHttpClientInvocation;
 import ca.uhn.fhir.rest.server.IBundleProvider;
@@ -56,14 +58,18 @@ import ca.uhn.fhir.util.FhirTerser;
 public class OperationMethodBinding extends BaseResourceReturningMethodBinding {
 
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(OperationMethodBinding.class);
+	private boolean myCanOperateAtInstanceLevel;
+	private boolean myCanOperateAtServerLevel;
 	private String myDescription;
 	private final boolean myIdempotent;
 	private final Integer myIdParamIndex;
 	private final String myName;
 	private final OtherOperationTypeEnum myOtherOperatiopnType;
+	private List<ReturnType> myReturnParams;
 	private final ReturnTypeEnum myReturnType;
 
-	public OperationMethodBinding(Class<?> theReturnResourceType, Class<? extends IBaseResource> theReturnTypeFromRp, Method theMethod, FhirContext theContext, Object theProvider, boolean theIdempotent, String theOperationName, Class<? extends IBaseResource> theOperationType) {
+	protected OperationMethodBinding(Class<?> theReturnResourceType, Class<? extends IBaseResource> theReturnTypeFromRp, Method theMethod, FhirContext theContext, Object theProvider, boolean theIdempotent, String theOperationName, Class<? extends IBaseResource> theOperationType,
+			OperationParam[] theReturnParams) {
 		super(theReturnResourceType, theMethod, theContext, theProvider);
 
 		myIdempotent = theIdempotent;
@@ -118,16 +124,44 @@ public class OperationMethodBinding extends BaseResourceReturningMethodBinding {
 		} else {
 			myOtherOperatiopnType = OtherOperationTypeEnum.EXTENDED_OPERATION_INSTANCE;
 		}
+
+		myReturnParams = new ArrayList<OperationMethodBinding.ReturnType>();
+		if (theReturnParams != null) {
+			for (OperationParam next : theReturnParams) {
+				ReturnType type = new ReturnType();
+				type.setName(next.name());
+				type.setMin(next.min());
+				type.setMax(next.max());
+				if (!next.type().equals(IBase.class)) {
+					if (next.type().isInterface() || Modifier.isAbstract(next.type().getModifiers())) {
+						throw new ConfigurationException("Invalid value for @OperationParam.type(): " + next.type().getName());
+					}
+					type.setType(theContext.getElementDefinition(next.type()).getName());
+				}
+				myReturnParams.add(type);
+			}
+		}
+
+		if (myIdParamIndex != null) {
+			myCanOperateAtInstanceLevel = true;
+		}
+		if (getResourceName() == null) {
+			myCanOperateAtServerLevel = true;
+		}
+
 	}
 
 	public OperationMethodBinding(Class<?> theReturnResourceType, Class<? extends IBaseResource> theReturnTypeFromRp, Method theMethod, FhirContext theContext, Object theProvider, Operation theAnnotation) {
-		this(theReturnResourceType, theReturnTypeFromRp, theMethod, theContext, theProvider, theAnnotation.idempotent(), theAnnotation.name(), theAnnotation.type());
+		this(theReturnResourceType, theReturnTypeFromRp, theMethod, theContext, theProvider, theAnnotation.idempotent(), theAnnotation.name(), theAnnotation.type(), theAnnotation.returnParameters());
 	}
 
 	public String getDescription() {
 		return myDescription;
 	}
 
+	/**
+	 * Returns the name of the operation, starting with "$"
+	 */
 	public String getName() {
 		return myName;
 	}
@@ -145,6 +179,10 @@ public class OperationMethodBinding extends BaseResourceReturningMethodBinding {
 	@Override
 	protected BundleTypeEnum getResponseBundleType() {
 		return null;
+	}
+
+	public List<ReturnType> getReturnParams() {
+		return Collections.unmodifiableList(myReturnParams);
 	}
 
 	@Override
@@ -222,12 +260,20 @@ public class OperationMethodBinding extends BaseResourceReturningMethodBinding {
 		return retVal;
 	}
 
+	public boolean isCanOperateAtInstanceLevel() {
+		return this.myCanOperateAtInstanceLevel;
+	}
+
+	public boolean isCanOperateAtServerLevel() {
+		return this.myCanOperateAtServerLevel;
+	}
+
 	public boolean isIdempotent() {
 		return myIdempotent;
 	}
 
-	public boolean isInstanceLevel() {
-		return myIdParamIndex != null;
+	public void setDescription(String theDescription) {
+		myDescription = theDescription;
 	}
 
 	public static BaseHttpClientInvocation createOperationInvocation(FhirContext theContext, String theResourceName, String theId, String theOperationName, IBaseParameters theInput, boolean theUseHttpGet) {
@@ -278,4 +324,47 @@ public class OperationMethodBinding extends BaseResourceReturningMethodBinding {
 			return new HttpGetClientInvocation(params, b.toString());
 		}
 	}
+
+	public static class ReturnType {
+		private int myMax;
+		private int myMin;
+		private String myName;
+		/**
+		 * http://hl7-fhir.github.io/valueset-operation-parameter-type.html
+		 */
+		private String myType;
+
+		public int getMax() {
+			return myMax;
+		}
+
+		public int getMin() {
+			return myMin;
+		}
+
+		public String getName() {
+			return myName;
+		}
+
+		public String getType() {
+			return myType;
+		}
+
+		public void setMax(int theMax) {
+			myMax = theMax;
+		}
+
+		public void setMin(int theMin) {
+			myMin = theMin;
+		}
+
+		public void setName(String theName) {
+			myName = theName;
+		}
+
+		public void setType(String theType) {
+			myType = theType;
+		}
+	}
+
 }

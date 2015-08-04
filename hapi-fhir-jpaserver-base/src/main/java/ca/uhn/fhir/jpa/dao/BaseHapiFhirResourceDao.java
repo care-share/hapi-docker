@@ -56,6 +56,7 @@ import javax.persistence.criteria.Subquery;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +85,7 @@ import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamString;
 import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamToken;
 import ca.uhn.fhir.jpa.entity.ResourceLink;
 import ca.uhn.fhir.jpa.entity.ResourceTable;
+import ca.uhn.fhir.jpa.entity.ResourceTag;
 import ca.uhn.fhir.jpa.entity.TagDefinition;
 import ca.uhn.fhir.jpa.entity.TagTypeEnum;
 import ca.uhn.fhir.jpa.util.StopWatch;
@@ -289,6 +291,101 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 		TypedQuery<Long> q = myEntityManager.createQuery(cq);
 		return new HashSet<Long>(q.getResultList());
+	}
+
+	private Set<Long> addPredicateTag(Set<Long> thePids, List<List<? extends IQueryParameterType>> theList) {
+		Set<Long> pids = thePids;
+		if (theList == null || theList.isEmpty()) {
+			return pids;
+		}
+
+		for (List<? extends IQueryParameterType> nextAndParams : theList) {
+			boolean haveTags = false;
+			for (IQueryParameterType nextParamUncasted : nextAndParams) {
+				TokenParam nextParam = (TokenParam) nextParamUncasted;
+				if (isNotBlank(nextParam.getValue())) {
+					haveTags = true;
+				} else if (isNotBlank(nextParam.getSystem())) {
+					throw new InvalidRequestException("Invalid _tag parameter (must supply a value/code and not just a system): " + nextParam.getValueAsQueryToken());
+				}
+			}
+			if (!haveTags) {
+				continue;
+			}
+
+			CriteriaBuilder builder = myEntityManager.getCriteriaBuilder();
+			CriteriaQuery<Long> cq = builder.createQuery(Long.class);
+			Root<ResourceTag> from = cq.from(ResourceTag.class);
+			cq.select(from.get("myResourceId").as(Long.class));
+
+			List<Predicate> andPredicates = new ArrayList<Predicate>();
+			andPredicates.add(builder.equal(from.get("myResourceType"), myResourceName));
+
+			List<Predicate> orPredicates = new ArrayList<Predicate>();
+			for (IQueryParameterType nextOrParams : nextAndParams) {
+				TokenParam nextParam = (TokenParam) nextOrParams;
+
+				From<ResourceTag, TagDefinition> defJoin = from.join("myTag");
+				Predicate codePrediate = builder.equal(defJoin.get("myCode"), nextParam.getValue());
+				if (isBlank(nextParam.getValue())) {
+					continue;
+				}
+				if (isNotBlank(nextParam.getSystem())) {
+					Predicate systemPrediate = builder.equal(defJoin.get("mySystem"), nextParam.getSystem());
+					orPredicates.add(builder.and(systemPrediate, codePrediate));
+				} else {
+					orPredicates.add(codePrediate);
+				}
+
+			}
+			if (orPredicates.isEmpty() == false) {
+				andPredicates.add(builder.or(orPredicates.toArray(new Predicate[0])));
+			}
+
+			Predicate masterCodePredicate = builder.and(andPredicates.toArray(new Predicate[0]));
+
+			if (pids.size() > 0) {
+				Predicate inPids = (from.get("myResourceId").in(pids));
+				cq.where(builder.and(masterCodePredicate, inPids));
+			} else {
+				cq.where(masterCodePredicate);
+			}
+
+			TypedQuery<Long> q = myEntityManager.createQuery(cq);
+			pids = new HashSet<Long>(q.getResultList());
+		}
+		
+		return pids;
+	}
+
+	private boolean addPredicateMissingFalseIfPresent(CriteriaBuilder theBuilder, String theParamName, Root<? extends BaseResourceIndexedSearchParam> from, List<Predicate> codePredicates,
+			IQueryParameterType nextOr) {
+		boolean missingFalse = false;
+		if (nextOr.getMissing() != null) {
+			if (nextOr.getMissing().booleanValue() == true) {
+				throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "multipleParamsWithSameNameOneIsMissingTrue", theParamName));
+			}
+			Predicate singleCode = from.get("myId").isNotNull();
+			Predicate name = theBuilder.equal(from.get("myParamName"), theParamName);
+			codePredicates.add(theBuilder.and(name, singleCode));
+			missingFalse = true;
+		}
+		return missingFalse;
+	}
+
+	private boolean addPredicateMissingFalseIfPresentForResourceLink(CriteriaBuilder theBuilder, String theParamName, Root<? extends ResourceLink> from, List<Predicate> codePredicates,
+			IQueryParameterType nextOr) {
+		boolean missingFalse = false;
+		if (nextOr.getMissing() != null) {
+			if (nextOr.getMissing().booleanValue() == true) {
+				throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "multipleParamsWithSameNameOneIsMissingTrue", theParamName));
+			}
+			Predicate singleCode = from.get("mySourceResource").isNotNull();
+			Predicate name = createResourceLinkPathPredicate(theParamName, theBuilder, from);
+			codePredicates.add(theBuilder.and(name, singleCode));
+			missingFalse = true;
+		}
+		return missingFalse;
 	}
 
 	private Set<Long> addPredicateNumber(String theParamName, Set<Long> thePids, List<? extends IQueryParameterType> theList) {
@@ -603,11 +700,11 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 						RuntimeResourceDefinition resDef = getContext().getResourceDefinition(ref.getResourceType());
 						resourceTypes.add(resDef.getImplementingClass());
 					}
-					
+
 					boolean foundChainMatch = false;
 					for (Class<? extends IBaseResource> nextType : resourceTypes) {
 						RuntimeResourceDefinition typeDef = getContext().getResourceDefinition(nextType);
-						
+
 						String chain = ref.getChain();
 						String remainingChain = null;
 						int chainDotIndex = chain.indexOf('.');
@@ -626,23 +723,23 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 							ourLog.debug("Don't have a DAO for type {}", nextType.getSimpleName(), param);
 							continue;
 						}
-						
+
 						IQueryParameterType chainValue;
 						if (remainingChain != null) {
 							if (param.getParamType() != RestSearchParameterTypeEnum.REFERENCE) {
 								ourLog.debug("Type {} parameter {} is not a reference, can not chain {}", new Object[] { nextType.getSimpleName(), chain, remainingChain });
 								continue;
 							}
-							
+
 							chainValue = new ReferenceParam();
 							chainValue.setValueAsQueryToken(null, resourceId);
-							((ReferenceParam)chainValue).setChain(remainingChain);
+							((ReferenceParam) chainValue).setChain(remainingChain);
 						} else {
 							chainValue = toParameterType(param, resourceId);
 						}
-						
+
 						foundChainMatch = true;
-						
+
 						Set<Long> pids = dao.searchForIds(chain, chainValue);
 						if (pids.isEmpty()) {
 							continue;
@@ -652,7 +749,7 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 						codePredicates.add(eq);
 
 					}
-					
+
 					if (!foundChainMatch) {
 						throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "invalidParameterChain", theParamName + '.' + ref.getChain()));
 					}
@@ -676,13 +773,6 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 		TypedQuery<Long> q = myEntityManager.createQuery(cq);
 		return new HashSet<Long>(q.getResultList());
-	}
-
-	private Predicate createResourceLinkPathPredicate(String theParamName, CriteriaBuilder builder, Root<? extends ResourceLink> from) {
-		RuntimeSearchParam param = getContext().getResourceDefinition(getResourceType()).getSearchParam(theParamName);
-		List<String> path = param.getPathsSplit();
-		Predicate type = from.get("mySourcePath").in(path);
-		return type;
 	}
 
 	private Set<Long> addPredicateString(String theParamName, Set<Long> thePids, List<? extends IQueryParameterType> theList) {
@@ -723,36 +813,6 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 		TypedQuery<Long> q = myEntityManager.createQuery(cq);
 		return new HashSet<Long>(q.getResultList());
-	}
-
-	private boolean addPredicateMissingFalseIfPresent(CriteriaBuilder theBuilder, String theParamName, Root<? extends BaseResourceIndexedSearchParam> from, List<Predicate> codePredicates,
-			IQueryParameterType nextOr) {
-		boolean missingFalse = false;
-		if (nextOr.getMissing() != null) {
-			if (nextOr.getMissing().booleanValue() == true) {
-				throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "multipleParamsWithSameNameOneIsMissingTrue", theParamName));
-			}
-			Predicate singleCode = from.get("myId").isNotNull();
-			Predicate name = theBuilder.equal(from.get("myParamName"), theParamName);
-			codePredicates.add(theBuilder.and(name, singleCode));
-			missingFalse = true;
-		}
-		return missingFalse;
-	}
-
-	private boolean addPredicateMissingFalseIfPresentForResourceLink(CriteriaBuilder theBuilder, String theParamName, Root<? extends ResourceLink> from, List<Predicate> codePredicates,
-			IQueryParameterType nextOr) {
-		boolean missingFalse = false;
-		if (nextOr.getMissing() != null) {
-			if (nextOr.getMissing().booleanValue() == true) {
-				throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "multipleParamsWithSameNameOneIsMissingTrue", theParamName));
-			}
-			Predicate singleCode = from.get("mySourceResource").isNotNull();
-			Predicate name = createResourceLinkPathPredicate(theParamName, theBuilder, from);
-			codePredicates.add(theBuilder.and(name, singleCode));
-			missingFalse = true;
-		}
-		return missingFalse;
 	}
 
 	private Set<Long> addPredicateToken(String theParamName, Set<Long> thePids, List<? extends IQueryParameterType> theList) {
@@ -857,10 +917,12 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 		if (isNotBlank(theResource.getId().getIdPart())) {
 			if (getContext().getVersion().getVersion().equals(FhirVersionEnum.DSTU1)) {
 				if (theResource.getId().isIdPartValidLong()) {
-					throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "failedToCreateWithClientAssignedNumericId", theResource.getId().getIdPart()));
+					String message = getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "failedToCreateWithClientAssignedNumericId", theResource.getId().getIdPart());
+					throw new InvalidRequestException(message, createErrorOperationOutcome(message));
 				}
 			} else {
-				throw new InvalidRequestException(getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "failedToCreateWithClientAssignedId", theResource.getId().getIdPart()));
+				String message = getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "failedToCreateWithClientAssignedId", theResource.getId().getIdPart());
+				throw new InvalidRequestException(message, createErrorOperationOutcome(message));
 			}
 		}
 
@@ -893,6 +955,16 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 		return retVal;
 	}
+
+	protected IBaseOperationOutcome createErrorOperationOutcome(String theMessage) {
+		return createOperationOutcome(IssueSeverityEnum.ERROR.getCode(), theMessage);
+	}
+
+	protected IBaseOperationOutcome createInfoOperationOutcome(String theMessage) {
+		return createOperationOutcome(IssueSeverityEnum.INFORMATION.getCode(), theMessage);
+	}
+
+	protected abstract IBaseOperationOutcome createOperationOutcome(String theSeverity, String theMessage);
 
 	private Predicate createPredicateDate(CriteriaBuilder theBuilder, From<ResourceIndexedSearchParamDate, ResourceIndexedSearchParamDate> theFrom, IQueryParameterType theParam) {
 		Predicate p;
@@ -1010,12 +1082,12 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 		}
 
 		if (system != null && system.length() > ResourceIndexedSearchParamToken.MAX_LENGTH) {
-			throw new InvalidRequestException("Parameter[" + theParamName + "] has system (" + system.length() + ") that is longer than maximum allowed (" + ResourceIndexedSearchParamToken.MAX_LENGTH
-					+ "): " + system);
+			throw new InvalidRequestException(
+					"Parameter[" + theParamName + "] has system (" + system.length() + ") that is longer than maximum allowed (" + ResourceIndexedSearchParamToken.MAX_LENGTH + "): " + system);
 		}
 		if (code != null && code.length() > ResourceIndexedSearchParamToken.MAX_LENGTH) {
-			throw new InvalidRequestException("Parameter[" + theParamName + "] has code (" + code.length() + ") that is longer than maximum allowed (" + ResourceIndexedSearchParamToken.MAX_LENGTH
-					+ "): " + code);
+			throw new InvalidRequestException(
+					"Parameter[" + theParamName + "] has code (" + code.length() + ") that is longer than maximum allowed (" + ResourceIndexedSearchParamToken.MAX_LENGTH + "): " + code);
 		}
 
 		ArrayList<Predicate> singleCodePredicates = (new ArrayList<Predicate>());
@@ -1036,7 +1108,14 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 		return singleCode;
 	}
 
-	private void createSort(CriteriaBuilder theBuilder, Root<ResourceTable> theFrom, SortSpec theSort, List<Order> theOrders) {
+	private Predicate createResourceLinkPathPredicate(String theParamName, CriteriaBuilder builder, Root<? extends ResourceLink> from) {
+		RuntimeSearchParam param = getContext().getResourceDefinition(getResourceType()).getSearchParam(theParamName);
+		List<String> path = param.getPathsSplit();
+		Predicate type = from.get("mySourcePath").in(path);
+		return type;
+	}
+
+	private void createSort(CriteriaBuilder theBuilder, Root<ResourceTable> theFrom, SortSpec theSort, List<Order> theOrders, List<Predicate> thePredicates) {
 		if (theSort == null || isBlank(theSort.getParamName())) {
 			return;
 		}
@@ -1051,7 +1130,7 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 				theOrders.add(theBuilder.desc(theFrom.get("myId")));
 			}
 
-			createSort(theBuilder, theFrom, theSort.getChain(), theOrders);
+			createSort(theBuilder, theFrom, theSort.getChain(), theOrders, thePredicates);
 			return;
 		}
 
@@ -1082,6 +1161,13 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 		}
 
 		From<?, ?> stringJoin = theFrom.join(joinAttrName, JoinType.INNER);
+
+		if (param.getParamType() == RestSearchParameterTypeEnum.REFERENCE) {
+			thePredicates.add(stringJoin.get("mySourcePath").as(String.class).in(param.getPathsSplit()));
+		} else {
+			thePredicates.add(theBuilder.equal(stringJoin.get("myParamName"), theSort.getParamName()));
+		}
+
 		// Predicate p = theBuilder.equal(stringJoin.get("myParamName"), theSort.getParamName());
 		// Predicate pn = theBuilder.isNull(stringJoin.get("myParamName"));
 		// thePredicates.add(theBuilder.or(p, pn));
@@ -1092,7 +1178,7 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 			theOrders.add(theBuilder.desc(stringJoin.get(sortAttrName)));
 		}
 
-		createSort(theBuilder, theFrom, theSort.getChain(), theOrders);
+		createSort(theBuilder, theFrom, theSort.getChain(), theOrders, thePredicates);
 	}
 
 	@Override
@@ -1176,18 +1262,12 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 		DaoMethodOutcome outcome = toMethodOutcome(entity, theResource).setCreated(true);
 
 		notifyWriteCompleted();
-		ourLog.info("Processed create on {} in {}ms", myResourceName, w.getMillisAndRestart());
-		return outcome;
-	}
 
-	/**
-	 * May
-	 * 
-	 * @param theResource
-	 *           The resource that is about to be stored
-	 */
-	protected void preProcessResourceForStorage(T theResource) {
-		// nothing by default
+		String msg = getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "successfulCreate", outcome.getId(), w.getMillisAndRestart());
+		outcome.setOperationOutcome(createInfoOperationOutcome(msg));
+
+		ourLog.info(msg);
+		return outcome;
 	}
 
 	@Override
@@ -1527,6 +1607,16 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 	}
 
+	/**
+	 * May be implemented by subclasses to validate resources prior to storage
+	 * 
+	 * @param theResource
+	 *           The resource that is about to be stored
+	 */
+	protected void preProcessResourceForStorage(T theResource) {
+		// nothing by default
+	}
+
 	@Override
 	public T read(IIdType theId) {
 		validateResourceTypeAndThrowIllegalArgumentException(theId);
@@ -1569,8 +1659,8 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 		if (entity == null) {
 			if (theId.hasVersionIdPart()) {
-				TypedQuery<ResourceHistoryTable> q = myEntityManager.createQuery(
-						"SELECT t from ResourceHistoryTable t WHERE t.myResourceId = :RID AND t.myResourceType = :RTYP AND t.myResourceVersion = :RVER", ResourceHistoryTable.class);
+				TypedQuery<ResourceHistoryTable> q = myEntityManager
+						.createQuery("SELECT t from ResourceHistoryTable t WHERE t.myResourceId = :RID AND t.myResourceType = :RTYP AND t.myResourceVersion = :RVER", ResourceHistoryTable.class);
 				q.setParameter("RID", pid);
 				q.setParameter("RTYP", myResourceName);
 				q.setParameter("RVER", Long.parseLong(theId.getVersionIdPart()));
@@ -1697,7 +1787,7 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 			CriteriaQuery<Tuple> cq = builder.createTupleQuery();
 			Root<ResourceTable> from = cq.from(ResourceTable.class);
 			predicates.add(from.get("myId").in(loadPids));
-			createSort(builder, from, theParams.getSort(), orders);
+			createSort(builder, from, theParams.getSort(), orders, predicates);
 			if (orders.size() > 0) {
 				Set<Long> originalPids = loadPids;
 				loadPids = new LinkedHashSet<Long>();
@@ -1905,6 +1995,10 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 				pids = addPredicateLanguage(pids, nextParamEntry.getValue());
 
+			} else if (nextParamName.equals("_tag")) {
+
+				pids = addPredicateTag(pids, nextParamEntry.getValue());
+
 			} else {
 
 				RuntimeSearchParam nextParamDef = resourceDef.getSearchParam(nextParamName);
@@ -2111,8 +2205,14 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 		ResourceTable savedEntity = updateEntity(theResource, entity, true, null, thePerformIndexing, true);
 
 		notifyWriteCompleted();
-		ourLog.info("Processed update on {} in {}ms", resourceId, w.getMillisAndRestart());
-		return toMethodOutcome(savedEntity, theResource).setCreated(false);
+
+		DaoMethodOutcome outcome = toMethodOutcome(savedEntity, theResource).setCreated(false);
+
+		String msg = getContext().getLocalizer().getMessage(BaseHapiFhirResourceDao.class, "successfulCreate", outcome.getId(), w.getMillisAndRestart());
+		outcome.setOperationOutcome(createInfoOperationOutcome(msg));
+
+		ourLog.info(msg);
+		return outcome;
 	}
 
 	private void validateGivenIdIsAppropriateToRetrieveResource(IIdType theId, BaseHasResource entity) {
@@ -2129,8 +2229,8 @@ public abstract class BaseHapiFhirResourceDao<T extends IResource> extends BaseH
 
 	private void validateResourceType(BaseHasResource entity) {
 		if (!myResourceName.equals(entity.getResourceType())) {
-			throw new ResourceNotFoundException("Resource with ID " + entity.getIdDt().getIdPart() + " exists but it is not of type " + myResourceName + ", found resource of type "
-					+ entity.getResourceType());
+			throw new ResourceNotFoundException(
+					"Resource with ID " + entity.getIdDt().getIdPart() + " exists but it is not of type " + myResourceName + ", found resource of type " + entity.getResourceType());
 		}
 	}
 

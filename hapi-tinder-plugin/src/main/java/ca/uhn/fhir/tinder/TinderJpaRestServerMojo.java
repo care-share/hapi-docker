@@ -8,7 +8,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang.WordUtils;
@@ -48,6 +47,9 @@ public class TinderJpaRestServerMojo extends AbstractMojo {
 
 	@Parameter(required = false)
 	private List<String> baseResourceNames;
+
+	@Parameter(required = false)
+	private List<String> excludeResourceNames;
 
 	@Parameter(required = true, defaultValue = "${project.build.directory}/..")
 	private String baseDir;
@@ -95,6 +97,17 @@ public class TinderJpaRestServerMojo extends AbstractMojo {
 					baseResourceNames.add(next.substring("resource.".length()).toLowerCase());
 				}
 			}
+		}
+
+		for (int i = 0; i < baseResourceNames.size(); i++) {
+			baseResourceNames.set(i, baseResourceNames.get(i).toLowerCase());
+		}
+
+		if (excludeResourceNames != null) {
+			for (int i = 0; i < excludeResourceNames.size(); i++) {
+				excludeResourceNames.set(i, excludeResourceNames.get(i).toLowerCase());
+			}
+			baseResourceNames.removeAll(excludeResourceNames);
 		}
 		
 		ourLog.info("Including the following resources: {}", baseResourceNames);

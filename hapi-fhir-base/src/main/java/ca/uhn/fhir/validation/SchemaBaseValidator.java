@@ -52,7 +52,7 @@ import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 
-class SchemaBaseValidator implements IValidator {
+class SchemaBaseValidator implements IValidatorModule {
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(SchemaBaseValidator.class);
 	private static final Set<String> SCHEMA_NAMES;
 
@@ -161,7 +161,7 @@ class SchemaBaseValidator implements IValidator {
 
 		private void addIssue(SAXParseException theException, ResultSeverityEnum theSeverity) {
 			SingleValidationMessage message = new SingleValidationMessage();
-			message.setLocationRow(theException.getLineNumber());
+			message.setLocationLine(theException.getLineNumber());
 			message.setLocationCol(theException.getColumnNumber());
 			message.setMessage(theException.getLocalizedMessage());
 			message.setSeverity(theSeverity);
