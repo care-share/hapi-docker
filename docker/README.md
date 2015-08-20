@@ -11,12 +11,12 @@ This file contains instructions for running a HAPI-FHIR server using Docker. The
 
 ## Configuration
 
-1. (Optional) In the "`docker/`" directory, edit the "`common.env`" file and change settings as desired
+1. If it doesn't exist, copy the "`common.env.example`" file to create the "`common.env`" file
+2. Edit the "`common.env`" file and change settings as desired
+3. (Optional) If using TLS encryption, you can generate a keystore and a self-signed certificate:
 
-2. (Optional) If using TLS encryption, you can generate a keystore and a self-signed certificate:
+        $ keytool -genkey -alias myalias -keyalg RSA -keystore ./docker/tls/keystore.p12 -storetype pkcs12
 
-        $ keytool -genkey -alias tomcat -keyalg RSA -keystore ./docker/tls/keystore.p12 -storetype pkcs12
-   
    You can find alternate methods for creating keystores at [this link](https://tomcat.apache.org/tomcat-8.0-doc/ssl-howto.html#Prepare_the_Certificate_Keystore)
 
 ## Running
