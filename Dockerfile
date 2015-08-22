@@ -1,7 +1,10 @@
-FROM tomcat:8.0
+FROM tomcat:7-jre8
+
+# Install Ruby (needed to run Tiller)
+RUN apt-get -y update && apt-get -y install ruby
 
 # Install Tiller for configuration management
-RUN apt-get -y update && apt-get -y install ruby && gem install tiller
+RUN gem install tiller
 
 # Copy the WAR file we want to run
 COPY hapi-fhir-jpaserver-example/target/hapi-fhir-jpaserver-example.war ${CATALINA_HOME}/webapps/hapi-fhir.war
