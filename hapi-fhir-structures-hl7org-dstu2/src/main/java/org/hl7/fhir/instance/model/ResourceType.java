@@ -1,6 +1,6 @@
 package org.hl7.fhir.instance.model;
 
-// Generated on Tue, Jul 21, 2015 10:37-0400 for FHIR v0.5.0
+// Generated on Thu, Aug 27, 2015 19:45-0400 for FHIR v0.5.0
 
 public enum ResourceType {
     Account,
@@ -58,7 +58,7 @@ public enum ResourceType {
     Medication,
     MedicationAdministration,
     MedicationDispense,
-    MedicationPrescription,
+    MedicationOrder,
     MedicationStatement,
     MessageHeader,
     NamingSystem,
@@ -81,7 +81,7 @@ public enum ResourceType {
     ProcessResponse,
     Provenance,
     Questionnaire,
-    QuestionnaireAnswers,
+    QuestionnaireResponse,
     ReferralRequest,
     RelatedPerson,
     RiskAssessment,
@@ -92,7 +92,6 @@ public enum ResourceType {
     StructureDefinition,
     Subscription,
     Substance,
-    Supply,
     SupplyDelivery,
     SupplyRequest,
     TestScript,
@@ -212,8 +211,8 @@ public enum ResourceType {
       return "medicationadministration";
     case MedicationDispense:
       return "medicationdispense";
-    case MedicationPrescription:
-      return "medicationprescription";
+    case MedicationOrder:
+      return "medicationorder";
     case MedicationStatement:
       return "medicationstatement";
     case MessageHeader:
@@ -258,8 +257,8 @@ public enum ResourceType {
       return "provenance";
     case Questionnaire:
       return "questionnaire";
-    case QuestionnaireAnswers:
-      return "questionnaireanswers";
+    case QuestionnaireResponse:
+      return "questionnaireresponse";
     case ReferralRequest:
       return "referralrequest";
     case RelatedPerson:
@@ -280,8 +279,6 @@ public enum ResourceType {
       return "subscription";
     case Substance:
       return "substance";
-    case Supply:
-      return "supply";
     case SupplyDelivery:
       return "supplydelivery";
     case SupplyRequest:

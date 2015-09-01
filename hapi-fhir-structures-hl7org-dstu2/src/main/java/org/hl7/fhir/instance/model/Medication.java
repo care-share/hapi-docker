@@ -29,7 +29,7 @@ package org.hl7.fhir.instance.model;
   
 */
 
-// Generated on Tue, Jul 21, 2015 10:37-0400 for FHIR v0.5.0
+// Generated on Thu, Aug 27, 2015 19:45-0400 for FHIR v0.5.0
 
 import java.util.*;
 
@@ -41,7 +41,7 @@ import org.hl7.fhir.instance.model.annotations.Description;
 import org.hl7.fhir.instance.model.annotations.Block;
 import org.hl7.fhir.instance.model.api.*;
 /**
- * Primarily used for identification and definition of Medication, but also covers ingredients and packaging.
+ * This resource is primarily used for the identification and definition of a medication. It covers the ingredients and the packaging for a medication.
  */
 @ResourceDef(name="Medication", profile="http://hl7.org/fhir/Profile/Medication")
 public class Medication extends DomainResource {
@@ -121,23 +121,23 @@ public class Medication extends DomainResource {
     @Block()
     public static class MedicationProductComponent extends BackboneElement implements IBaseBackboneElement {
         /**
-         * Describes the form of the item.  Powder; tables; carton.
+         * Describes the form of the item.  Powder; tablets; carton.
          */
-        @Child(name = "form", type = {CodeableConcept.class}, order=1, min=0, max=1)
-        @Description(shortDefinition="powder | tablets | carton +", formalDefinition="Describes the form of the item.  Powder; tables; carton." )
+        @Child(name = "form", type = {CodeableConcept.class}, order=1, min=0, max=1, modifier=false, summary=false)
+        @Description(shortDefinition="powder | tablets | carton +", formalDefinition="Describes the form of the item.  Powder; tablets; carton." )
         protected CodeableConcept form;
 
         /**
          * Identifies a particular constituent of interest in the product.
          */
-        @Child(name = "ingredient", type = {}, order=2, min=0, max=Child.MAX_UNLIMITED)
+        @Child(name = "ingredient", type = {}, order=2, min=0, max=Child.MAX_UNLIMITED, modifier=false, summary=false)
         @Description(shortDefinition="Active or inactive ingredient", formalDefinition="Identifies a particular constituent of interest in the product." )
         protected List<MedicationProductIngredientComponent> ingredient;
 
         /**
          * Information about a group of medication produced or packaged from one production run.
          */
-        @Child(name = "batch", type = {}, order=3, min=0, max=Child.MAX_UNLIMITED)
+        @Child(name = "batch", type = {}, order=3, min=0, max=Child.MAX_UNLIMITED, modifier=false, summary=false)
         @Description(shortDefinition="", formalDefinition="Information about a group of medication produced or packaged from one production run." )
         protected List<MedicationProductBatchComponent> batch;
 
@@ -151,7 +151,7 @@ public class Medication extends DomainResource {
       }
 
         /**
-         * @return {@link #form} (Describes the form of the item.  Powder; tables; carton.)
+         * @return {@link #form} (Describes the form of the item.  Powder; tablets; carton.)
          */
         public CodeableConcept getForm() { 
           if (this.form == null)
@@ -167,7 +167,7 @@ public class Medication extends DomainResource {
         }
 
         /**
-         * @param value {@link #form} (Describes the form of the item.  Powder; tables; carton.)
+         * @param value {@link #form} (Describes the form of the item.  Powder; tablets; carton.)
          */
         public MedicationProductComponent setForm(CodeableConcept value) { 
           this.form = value;
@@ -256,7 +256,7 @@ public class Medication extends DomainResource {
 
         protected void listChildren(List<Property> childrenList) {
           super.listChildren(childrenList);
-          childrenList.add(new Property("form", "CodeableConcept", "Describes the form of the item.  Powder; tables; carton.", 0, java.lang.Integer.MAX_VALUE, form));
+          childrenList.add(new Property("form", "CodeableConcept", "Describes the form of the item.  Powder; tablets; carton.", 0, java.lang.Integer.MAX_VALUE, form));
           childrenList.add(new Property("ingredient", "", "Identifies a particular constituent of interest in the product.", 0, java.lang.Integer.MAX_VALUE, ingredient));
           childrenList.add(new Property("batch", "", "Information about a group of medication produced or packaged from one production run.", 0, java.lang.Integer.MAX_VALUE, batch));
         }
@@ -311,7 +311,7 @@ public class Medication extends DomainResource {
         /**
          * The actual ingredient - either a substance (simple ingredient) or another medication.
          */
-        @Child(name = "item", type = {Substance.class, Medication.class}, order=1, min=1, max=1)
+        @Child(name = "item", type = {Substance.class, Medication.class}, order=1, min=1, max=1, modifier=false, summary=false)
         @Description(shortDefinition="The product contained", formalDefinition="The actual ingredient - either a substance (simple ingredient) or another medication." )
         protected Reference item;
 
@@ -323,7 +323,7 @@ public class Medication extends DomainResource {
         /**
          * Specifies how many (or how much) of the items there are in this Medication.  E.g. 250 mg per tablet.
          */
-        @Child(name = "amount", type = {Ratio.class}, order=2, min=0, max=1)
+        @Child(name = "amount", type = {Ratio.class}, order=2, min=0, max=1, modifier=false, summary=false)
         @Description(shortDefinition="How much ingredient in product", formalDefinition="Specifies how many (or how much) of the items there are in this Medication.  E.g. 250 mg per tablet." )
         protected Ratio amount;
 
@@ -453,14 +453,14 @@ public class Medication extends DomainResource {
         /**
          * The assigned lot number of a batch of the specified product.
          */
-        @Child(name = "lotNumber", type = {StringType.class}, order=1, min=0, max=1)
+        @Child(name = "lotNumber", type = {StringType.class}, order=1, min=0, max=1, modifier=false, summary=false)
         @Description(shortDefinition="", formalDefinition="The assigned lot number of a batch of the specified product." )
         protected StringType lotNumber;
 
         /**
          * When this specific batch of product will expire.
          */
-        @Child(name = "expirationDate", type = {DateTimeType.class}, order=2, min=0, max=1)
+        @Child(name = "expirationDate", type = {DateTimeType.class}, order=2, min=0, max=1, modifier=false, summary=false)
         @Description(shortDefinition="", formalDefinition="When this specific batch of product will expire." )
         protected DateTimeType expirationDate;
 
@@ -619,14 +619,14 @@ public class Medication extends DomainResource {
         /**
          * The kind of container that this package comes as.
          */
-        @Child(name = "container", type = {CodeableConcept.class}, order=1, min=0, max=1)
+        @Child(name = "container", type = {CodeableConcept.class}, order=1, min=0, max=1, modifier=false, summary=false)
         @Description(shortDefinition="E.g. box, vial, blister-pack", formalDefinition="The kind of container that this package comes as." )
         protected CodeableConcept container;
 
         /**
          * A set of components that go to make up the described item.
          */
-        @Child(name = "content", type = {}, order=2, min=0, max=Child.MAX_UNLIMITED)
+        @Child(name = "content", type = {}, order=2, min=0, max=Child.MAX_UNLIMITED, modifier=false, summary=false)
         @Description(shortDefinition="What is  in the package?", formalDefinition="A set of components that go to make up the described item." )
         protected List<MedicationPackageContentComponent> content;
 
@@ -753,7 +753,7 @@ public class Medication extends DomainResource {
         /**
          * Identifies one of the items in the package.
          */
-        @Child(name = "item", type = {Medication.class}, order=1, min=1, max=1)
+        @Child(name = "item", type = {Medication.class}, order=1, min=1, max=1, modifier=false, summary=false)
         @Description(shortDefinition="A product in the package", formalDefinition="Identifies one of the items in the package." )
         protected Reference item;
 
@@ -765,11 +765,11 @@ public class Medication extends DomainResource {
         /**
          * The amount of the product that is in the package.
          */
-        @Child(name = "amount", type = {Quantity.class}, order=2, min=0, max=1)
+        @Child(name = "amount", type = {SimpleQuantity.class}, order=2, min=0, max=1, modifier=false, summary=false)
         @Description(shortDefinition="How many are in the package?", formalDefinition="The amount of the product that is in the package." )
-        protected Quantity amount;
+        protected SimpleQuantity amount;
 
-        private static final long serialVersionUID = -1385430192L;
+        private static final long serialVersionUID = -1150048030L;
 
     /*
      * Constructor
@@ -833,12 +833,12 @@ public class Medication extends DomainResource {
         /**
          * @return {@link #amount} (The amount of the product that is in the package.)
          */
-        public Quantity getAmount() { 
+        public SimpleQuantity getAmount() { 
           if (this.amount == null)
             if (Configuration.errorOnAutoCreate())
               throw new Error("Attempt to auto-create MedicationPackageContentComponent.amount");
             else if (Configuration.doAutoCreate())
-              this.amount = new Quantity(); // cc
+              this.amount = new SimpleQuantity(); // cc
           return this.amount;
         }
 
@@ -849,7 +849,7 @@ public class Medication extends DomainResource {
         /**
          * @param value {@link #amount} (The amount of the product that is in the package.)
          */
-        public MedicationPackageContentComponent setAmount(Quantity value) { 
+        public MedicationPackageContentComponent setAmount(SimpleQuantity value) { 
           this.amount = value;
           return this;
         }
@@ -857,7 +857,7 @@ public class Medication extends DomainResource {
         protected void listChildren(List<Property> childrenList) {
           super.listChildren(childrenList);
           childrenList.add(new Property("item", "Reference(Medication)", "Identifies one of the items in the package.", 0, java.lang.Integer.MAX_VALUE, item));
-          childrenList.add(new Property("amount", "Quantity", "The amount of the product that is in the package.", 0, java.lang.Integer.MAX_VALUE, amount));
+          childrenList.add(new Property("amount", "SimpleQuantity", "The amount of the product that is in the package.", 0, java.lang.Integer.MAX_VALUE, amount));
         }
 
       public MedicationPackageContentComponent copy() {
@@ -896,30 +896,23 @@ public class Medication extends DomainResource {
   }
 
     /**
-     * The common/commercial name of the medication absent information such as strength, form, etc.  E.g. Acetaminophen, Tylenol 3, etc.  The fully coordinated name is communicated as the display of Medication.code.
+     * A code (or set of codes) that specify this medication, or a textual description if no code is available. Usage note: This could be a standard medication code such as a code from RxNorm, SNOMED CT, IDMP etc. It could also be a national or local formulary code, optionally with translations to other code systems.
      */
-    @Child(name = "name", type = {StringType.class}, order=0, min=0, max=1)
-    @Description(shortDefinition="Common / Commercial name", formalDefinition="The common/commercial name of the medication absent information such as strength, form, etc.  E.g. Acetaminophen, Tylenol 3, etc.  The fully coordinated name is communicated as the display of Medication.code." )
-    protected StringType name;
-
-    /**
-     * A code (or set of codes) that identify this medication.   Usage note: This could be a standard drug code such as a drug regulator code, RxNorm code, SNOMED CT code, etc. It could also be a local formulary code, optionally with translations to the standard drug codes.
-     */
-    @Child(name = "code", type = {CodeableConcept.class}, order=1, min=0, max=1)
-    @Description(shortDefinition="Codes that identify this medication", formalDefinition="A code (or set of codes) that identify this medication.   Usage note: This could be a standard drug code such as a drug regulator code, RxNorm code, SNOMED CT code, etc. It could also be a local formulary code, optionally with translations to the standard drug codes." )
+    @Child(name = "code", type = {CodeableConcept.class}, order=0, min=0, max=1, modifier=false, summary=true)
+    @Description(shortDefinition="Codes that identify this medication", formalDefinition="A code (or set of codes) that specify this medication, or a textual description if no code is available. Usage note: This could be a standard medication code such as a code from RxNorm, SNOMED CT, IDMP etc. It could also be a national or local formulary code, optionally with translations to other code systems." )
     protected CodeableConcept code;
 
     /**
-     * Set to true if the item is attributable to a specific manufacturer (even if we don't know who that is).
+     * Set to true if the item is attributable to a specific manufacturer.
      */
-    @Child(name = "isBrand", type = {BooleanType.class}, order=2, min=0, max=1)
-    @Description(shortDefinition="True if a brand", formalDefinition="Set to true if the item is attributable to a specific manufacturer (even if we don't know who that is)." )
+    @Child(name = "isBrand", type = {BooleanType.class}, order=1, min=0, max=1, modifier=false, summary=true)
+    @Description(shortDefinition="True if a brand", formalDefinition="Set to true if the item is attributable to a specific manufacturer." )
     protected BooleanType isBrand;
 
     /**
      * Describes the details of the manufacturer.
      */
-    @Child(name = "manufacturer", type = {Organization.class}, order=3, min=0, max=1)
+    @Child(name = "manufacturer", type = {Organization.class}, order=2, min=0, max=1, modifier=false, summary=true)
     @Description(shortDefinition="Manufacturer of the item", formalDefinition="Describes the details of the manufacturer." )
     protected Reference manufacturer;
 
@@ -931,25 +924,25 @@ public class Medication extends DomainResource {
     /**
      * Medications are either a single administrable product or a package that contains one or more products.
      */
-    @Child(name = "kind", type = {CodeType.class}, order=4, min=0, max=1)
+    @Child(name = "kind", type = {CodeType.class}, order=3, min=0, max=1, modifier=false, summary=true)
     @Description(shortDefinition="product | package", formalDefinition="Medications are either a single administrable product or a package that contains one or more products." )
     protected Enumeration<MedicationKind> kind;
 
     /**
      * Information that only applies to products (not packages).
      */
-    @Child(name = "product", type = {}, order=5, min=0, max=1)
+    @Child(name = "product", type = {}, order=4, min=0, max=1, modifier=false, summary=false)
     @Description(shortDefinition="Administrable medication details", formalDefinition="Information that only applies to products (not packages)." )
     protected MedicationProductComponent product;
 
     /**
      * Information that only applies to packages (not products).
      */
-    @Child(name = "package", type = {}, order=6, min=0, max=1)
+    @Child(name = "package", type = {}, order=5, min=0, max=1, modifier=false, summary=false)
     @Description(shortDefinition="Details about packaged medications", formalDefinition="Information that only applies to packages (not products)." )
     protected MedicationPackageComponent package_;
 
-    private static final long serialVersionUID = 385691577L;
+    private static final long serialVersionUID = -1593137297L;
 
   /*
    * Constructor
@@ -959,56 +952,7 @@ public class Medication extends DomainResource {
     }
 
     /**
-     * @return {@link #name} (The common/commercial name of the medication absent information such as strength, form, etc.  E.g. Acetaminophen, Tylenol 3, etc.  The fully coordinated name is communicated as the display of Medication.code.). This is the underlying object with id, value and extensions. The accessor "getName" gives direct access to the value
-     */
-    public StringType getNameElement() { 
-      if (this.name == null)
-        if (Configuration.errorOnAutoCreate())
-          throw new Error("Attempt to auto-create Medication.name");
-        else if (Configuration.doAutoCreate())
-          this.name = new StringType(); // bb
-      return this.name;
-    }
-
-    public boolean hasNameElement() { 
-      return this.name != null && !this.name.isEmpty();
-    }
-
-    public boolean hasName() { 
-      return this.name != null && !this.name.isEmpty();
-    }
-
-    /**
-     * @param value {@link #name} (The common/commercial name of the medication absent information such as strength, form, etc.  E.g. Acetaminophen, Tylenol 3, etc.  The fully coordinated name is communicated as the display of Medication.code.). This is the underlying object with id, value and extensions. The accessor "getName" gives direct access to the value
-     */
-    public Medication setNameElement(StringType value) { 
-      this.name = value;
-      return this;
-    }
-
-    /**
-     * @return The common/commercial name of the medication absent information such as strength, form, etc.  E.g. Acetaminophen, Tylenol 3, etc.  The fully coordinated name is communicated as the display of Medication.code.
-     */
-    public String getName() { 
-      return this.name == null ? null : this.name.getValue();
-    }
-
-    /**
-     * @param value The common/commercial name of the medication absent information such as strength, form, etc.  E.g. Acetaminophen, Tylenol 3, etc.  The fully coordinated name is communicated as the display of Medication.code.
-     */
-    public Medication setName(String value) { 
-      if (Utilities.noString(value))
-        this.name = null;
-      else {
-        if (this.name == null)
-          this.name = new StringType();
-        this.name.setValue(value);
-      }
-      return this;
-    }
-
-    /**
-     * @return {@link #code} (A code (or set of codes) that identify this medication.   Usage note: This could be a standard drug code such as a drug regulator code, RxNorm code, SNOMED CT code, etc. It could also be a local formulary code, optionally with translations to the standard drug codes.)
+     * @return {@link #code} (A code (or set of codes) that specify this medication, or a textual description if no code is available. Usage note: This could be a standard medication code such as a code from RxNorm, SNOMED CT, IDMP etc. It could also be a national or local formulary code, optionally with translations to other code systems.)
      */
     public CodeableConcept getCode() { 
       if (this.code == null)
@@ -1024,7 +968,7 @@ public class Medication extends DomainResource {
     }
 
     /**
-     * @param value {@link #code} (A code (or set of codes) that identify this medication.   Usage note: This could be a standard drug code such as a drug regulator code, RxNorm code, SNOMED CT code, etc. It could also be a local formulary code, optionally with translations to the standard drug codes.)
+     * @param value {@link #code} (A code (or set of codes) that specify this medication, or a textual description if no code is available. Usage note: This could be a standard medication code such as a code from RxNorm, SNOMED CT, IDMP etc. It could also be a national or local formulary code, optionally with translations to other code systems.)
      */
     public Medication setCode(CodeableConcept value) { 
       this.code = value;
@@ -1032,7 +976,7 @@ public class Medication extends DomainResource {
     }
 
     /**
-     * @return {@link #isBrand} (Set to true if the item is attributable to a specific manufacturer (even if we don't know who that is).). This is the underlying object with id, value and extensions. The accessor "getIsBrand" gives direct access to the value
+     * @return {@link #isBrand} (Set to true if the item is attributable to a specific manufacturer.). This is the underlying object with id, value and extensions. The accessor "getIsBrand" gives direct access to the value
      */
     public BooleanType getIsBrandElement() { 
       if (this.isBrand == null)
@@ -1052,7 +996,7 @@ public class Medication extends DomainResource {
     }
 
     /**
-     * @param value {@link #isBrand} (Set to true if the item is attributable to a specific manufacturer (even if we don't know who that is).). This is the underlying object with id, value and extensions. The accessor "getIsBrand" gives direct access to the value
+     * @param value {@link #isBrand} (Set to true if the item is attributable to a specific manufacturer.). This is the underlying object with id, value and extensions. The accessor "getIsBrand" gives direct access to the value
      */
     public Medication setIsBrandElement(BooleanType value) { 
       this.isBrand = value;
@@ -1060,14 +1004,14 @@ public class Medication extends DomainResource {
     }
 
     /**
-     * @return Set to true if the item is attributable to a specific manufacturer (even if we don't know who that is).
+     * @return Set to true if the item is attributable to a specific manufacturer.
      */
     public boolean getIsBrand() { 
       return this.isBrand == null || this.isBrand.isEmpty() ? false : this.isBrand.getValue();
     }
 
     /**
-     * @param value Set to true if the item is attributable to a specific manufacturer (even if we don't know who that is).
+     * @param value Set to true if the item is attributable to a specific manufacturer.
      */
     public Medication setIsBrand(boolean value) { 
         if (this.isBrand == null)
@@ -1219,9 +1163,8 @@ public class Medication extends DomainResource {
 
       protected void listChildren(List<Property> childrenList) {
         super.listChildren(childrenList);
-        childrenList.add(new Property("name", "string", "The common/commercial name of the medication absent information such as strength, form, etc.  E.g. Acetaminophen, Tylenol 3, etc.  The fully coordinated name is communicated as the display of Medication.code.", 0, java.lang.Integer.MAX_VALUE, name));
-        childrenList.add(new Property("code", "CodeableConcept", "A code (or set of codes) that identify this medication.   Usage note: This could be a standard drug code such as a drug regulator code, RxNorm code, SNOMED CT code, etc. It could also be a local formulary code, optionally with translations to the standard drug codes.", 0, java.lang.Integer.MAX_VALUE, code));
-        childrenList.add(new Property("isBrand", "boolean", "Set to true if the item is attributable to a specific manufacturer (even if we don't know who that is).", 0, java.lang.Integer.MAX_VALUE, isBrand));
+        childrenList.add(new Property("code", "CodeableConcept", "A code (or set of codes) that specify this medication, or a textual description if no code is available. Usage note: This could be a standard medication code such as a code from RxNorm, SNOMED CT, IDMP etc. It could also be a national or local formulary code, optionally with translations to other code systems.", 0, java.lang.Integer.MAX_VALUE, code));
+        childrenList.add(new Property("isBrand", "boolean", "Set to true if the item is attributable to a specific manufacturer.", 0, java.lang.Integer.MAX_VALUE, isBrand));
         childrenList.add(new Property("manufacturer", "Reference(Organization)", "Describes the details of the manufacturer.", 0, java.lang.Integer.MAX_VALUE, manufacturer));
         childrenList.add(new Property("kind", "code", "Medications are either a single administrable product or a package that contains one or more products.", 0, java.lang.Integer.MAX_VALUE, kind));
         childrenList.add(new Property("product", "", "Information that only applies to products (not packages).", 0, java.lang.Integer.MAX_VALUE, product));
@@ -1231,7 +1174,6 @@ public class Medication extends DomainResource {
       public Medication copy() {
         Medication dst = new Medication();
         copyValues(dst);
-        dst.name = name == null ? null : name.copy();
         dst.code = code == null ? null : code.copy();
         dst.isBrand = isBrand == null ? null : isBrand.copy();
         dst.manufacturer = manufacturer == null ? null : manufacturer.copy();
@@ -1252,9 +1194,9 @@ public class Medication extends DomainResource {
         if (!(other instanceof Medication))
           return false;
         Medication o = (Medication) other;
-        return compareDeep(name, o.name, true) && compareDeep(code, o.code, true) && compareDeep(isBrand, o.isBrand, true)
-           && compareDeep(manufacturer, o.manufacturer, true) && compareDeep(kind, o.kind, true) && compareDeep(product, o.product, true)
-           && compareDeep(package_, o.package_, true);
+        return compareDeep(code, o.code, true) && compareDeep(isBrand, o.isBrand, true) && compareDeep(manufacturer, o.manufacturer, true)
+           && compareDeep(kind, o.kind, true) && compareDeep(product, o.product, true) && compareDeep(package_, o.package_, true)
+          ;
       }
 
       @Override
@@ -1264,15 +1206,13 @@ public class Medication extends DomainResource {
         if (!(other instanceof Medication))
           return false;
         Medication o = (Medication) other;
-        return compareValues(name, o.name, true) && compareValues(isBrand, o.isBrand, true) && compareValues(kind, o.kind, true)
-          ;
+        return compareValues(isBrand, o.isBrand, true) && compareValues(kind, o.kind, true);
       }
 
       public boolean isEmpty() {
-        return super.isEmpty() && (name == null || name.isEmpty()) && (code == null || code.isEmpty())
-           && (isBrand == null || isBrand.isEmpty()) && (manufacturer == null || manufacturer.isEmpty())
-           && (kind == null || kind.isEmpty()) && (product == null || product.isEmpty()) && (package_ == null || package_.isEmpty())
-          ;
+        return super.isEmpty() && (code == null || code.isEmpty()) && (isBrand == null || isBrand.isEmpty())
+           && (manufacturer == null || manufacturer.isEmpty()) && (kind == null || kind.isEmpty()) && (product == null || product.isEmpty())
+           && (package_ == null || package_.isEmpty());
       }
 
   @Override
@@ -1288,8 +1228,6 @@ public class Medication extends DomainResource {
   public static final String SP_INGREDIENT = "ingredient";
   @SearchParamDefinition(name="form", path="Medication.product.form", description="powder | tablets | carton +", type="token" )
   public static final String SP_FORM = "form";
-  @SearchParamDefinition(name="name", path="Medication.name", description="Common / Commercial name", type="string" )
-  public static final String SP_NAME = "name";
   @SearchParamDefinition(name="content", path="Medication.package.content.item", description="A product in the package", type="reference" )
   public static final String SP_CONTENT = "content";
   @SearchParamDefinition(name="manufacturer", path="Medication.manufacturer", description="Manufacturer of the item", type="reference" )

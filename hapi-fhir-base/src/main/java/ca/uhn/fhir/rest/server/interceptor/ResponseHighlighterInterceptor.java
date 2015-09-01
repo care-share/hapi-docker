@@ -21,6 +21,7 @@ package ca.uhn.fhir.rest.server.interceptor;
  */
 
 import java.io.IOException;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -166,8 +167,8 @@ public class ResponseHighlighterInterceptor extends InterceptorAdapter {
 		/*
 		 * It's not a browser...
 		 */
-		String accept = theServletRequest.getHeader(Constants.HEADER_ACCEPT);
-		if (accept == null || !accept.toLowerCase().contains("html")) {
+		Set<String> highestRankedAcceptValues = RestfulServerUtils.parseAcceptHeaderAndReturnHighestRankedOptions(theRequestDetails.getServletRequest());
+		if (highestRankedAcceptValues.contains(Constants.CT_HTML) == false) {
 			return super.outgoingResponse(theRequestDetails, theResponseObject, theServletRequest, theServletResponse);
 		}
 		
@@ -186,29 +187,22 @@ public class ResponseHighlighterInterceptor extends InterceptorAdapter {
 			return super.outgoingResponse(theRequestDetails, theResponseObject, theServletRequest, theServletResponse);
 		}
 		
-		streamResponse(theRequestDetails, theServletRequest, theServletResponse, theResponseObject);
+		streamResponse(theRequestDetails, theServletResponse, theResponseObject);
 		
 		return false;
 	}
 
-	private void streamResponse(RequestDetails theRequestDetails, HttpServletRequest theServletRequest, HttpServletResponse theServletResponse, IBaseResource resource) {
-		// Pretty print
-		boolean prettyPrint = RestfulServerUtils.prettyPrintResponse(theRequestDetails.getServer(), theRequestDetails);
-
-		// Determine response encoding
-		EncodingEnum responseEncoding = null;
+	private void streamResponse(RequestDetails theRequestDetails, HttpServletResponse theServletResponse, IBaseResource resource) {
+		IParser p;
 		if (theRequestDetails.getParameters().containsKey(Constants.PARAM_FORMAT)) {
-			// Browsers often state that they accept XML but we won't take that as being the user's preference
-			// unless they explicitly request it
-			responseEncoding = RestfulServerUtils.determineResponseEncodingNoDefault(theServletRequest);
+			p = RestfulServerUtils.getNewParser(theRequestDetails.getServer().getFhirContext(), theRequestDetails);
+		} else {
+			EncodingEnum defaultResponseEncoding = theRequestDetails.getServer().getDefaultResponseEncoding();
+			p = defaultResponseEncoding.newParser(theRequestDetails.getServer().getFhirContext());
+			RestfulServerUtils.configureResponseParser(theRequestDetails, p);
 		}
-		if (responseEncoding == null) {
-			responseEncoding = theRequestDetails.getServer().getDefaultResponseEncoding();
-		}
-
-		IParser p = responseEncoding.newParser(theRequestDetails.getServer().getFhirContext());
-		p.setPrettyPrint(prettyPrint);
-
+		
+		EncodingEnum encoding = p.getEncoding(); 
 		String encoded = p.encodeResourceToString(resource);
 		
 		theServletResponse.setContentType(Constants.CT_HTML_WITH_UTF8);
@@ -239,7 +233,7 @@ public class ResponseHighlighterInterceptor extends InterceptorAdapter {
 				"	</head>\n" + 
 				"\n" + 
 				"	<body>" +
-				"<pre>" + format(encoded, responseEncoding) + "</pre>" +
+				"<pre>" + format(encoded, encoding) + "</pre>" +
 				"   </body>" +
 				"</html>";
 		//@formatter:off
@@ -257,8 +251,8 @@ public class ResponseHighlighterInterceptor extends InterceptorAdapter {
 		/*
 		 * It's not a browser...
 		 */
-		String accept = theServletRequest.getHeader(Constants.HEADER_ACCEPT);
-		if (accept == null || !accept.toLowerCase().contains("html")) {
+		Set<String> accept = RestfulServerUtils.parseAcceptHeaderAndReturnHighestRankedOptions(theRequestDetails.getServletRequest());
+		if (!accept.contains(Constants.CT_HTML)) {
 			return super.handleException(theRequestDetails, theException, theServletRequest, theServletResponse);
 		}
 		
@@ -277,16 +271,11 @@ public class ResponseHighlighterInterceptor extends InterceptorAdapter {
 			return super.handleException(theRequestDetails, theException, theServletRequest, theServletResponse);
 		}
 		
-		if (!(theException instanceof BaseServerResponseException)) {
+		if (theException.getOperationOutcome() == null) {
 			return super.handleException(theRequestDetails, theException, theServletRequest, theServletResponse);
 		}
 		
-		BaseServerResponseException bsre = (BaseServerResponseException)theException;
-		if (bsre.getOperationOutcome() == null) {
-			return super.handleException(theRequestDetails, theException, theServletRequest, theServletResponse);
-		}
-		
-		streamResponse(theRequestDetails, theServletRequest, theServletResponse, bsre.getOperationOutcome());
+		streamResponse(theRequestDetails, theServletResponse, theException.getOperationOutcome());
 		
 		return false;
 	}

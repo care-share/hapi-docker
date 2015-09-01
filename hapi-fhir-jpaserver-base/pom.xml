@@ -43,37 +43,31 @@
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-structures-dstu</artifactId>
 			<version>1.2-SNAPSHOT</version>
-			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-structures-dstu2</artifactId>
 			<version>1.2-SNAPSHOT</version>
-			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-structures-hl7org-dstu2</artifactId>
 			<version>1.2-SNAPSHOT</version>
-			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>ca.uhn.hapi.fhir</groupId>
+			<artifactId>hapi-fhir-validation-resources</artifactId>
+			<version>1.2-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>jcl-over-slf4j</artifactId>
-			<version>${slf4j_version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>${logback_version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.hamcrest</groupId>
-			<artifactId>java-hamcrest</artifactId>
-			<version>${hamcrest_version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -119,28 +113,19 @@
 
 		<!-- Test Database -->
 		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>${junit_version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>
-			<version>${derby_version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>commons-dbcp</groupId>
-			<artifactId>commons-dbcp</artifactId>
-			<version>1.4</version>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
-			<version>3.1.0</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -157,7 +142,6 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-core</artifactId>
-			<version>${spring_version}</version>
 			<exclusions>
 				<exclusion>
 					<artifactId>commons-logging</artifactId>
@@ -168,12 +152,10 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-orm</artifactId>
-			<version>${spring_version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-context</artifactId>
-			<version>${spring_version}</version>
 			<exclusions>
 				<exclusion>
 					<artifactId>xml-apis</artifactId>
@@ -184,17 +166,19 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-beans</artifactId>
-			<version>${spring_version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-tx</artifactId>
-			<version>${spring_version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-context-support</artifactId>
-			<version>${spring_version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<scope>test</scope>
 		</dependency>
 
 		<!-- Hibernate -->
@@ -260,31 +244,31 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>${guava_version}</version>
 		</dependency>
 		
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-servlets</artifactId>
-			<version>${jetty_version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-servlet</artifactId>
-			<version>${jetty_version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-server</artifactId>
-			<version>${jetty_version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-util</artifactId>
-			<version>${jetty_version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		
