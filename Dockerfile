@@ -18,9 +18,6 @@ RUN \
 # Copy Tiller templates and configuration
 ADD docker/tiller /etc/tiller
 
-# Copy TLS keystore, if any
-COPY docker/tls ${CATALINA_HOME}/conf/tls
-
 # Replace the database configuration (triggers restoration of database backup)
 COPY docker/WEB-INF/hapi-fhir-server-database-config.xml ${CATALINA_HOME}/webapps/ROOT/WEB-INF/
 

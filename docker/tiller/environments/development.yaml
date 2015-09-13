@@ -6,12 +6,6 @@ tomcat-users.erb:
   target: /usr/local/tomcat/conf/tomcat-users.xml
   config: {}
 
-# Process the server template file and install it to the Tomcat server
-# Config is empty because we obtain our key/value pairs from environment vars
-server.erb:
-  target: /usr/local/tomcat/conf/server.xml
-  config: {}
-
 # Process the catalina template file and install it to the Tomcat server
 # Config is empty because we obtain our key/value pairs from environment vars
 catalina.erb:
