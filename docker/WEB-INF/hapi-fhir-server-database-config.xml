@@ -22,7 +22,7 @@
 	-->
 	<bean id="myPersistenceDataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
 		<!--<property name="url" value="jdbc:derby:directory:jpaserver_derby_files;create=true" />-->
-		<property name="url" value="jdbc:derby:directory:jpaserver_derby_files;createFrom=/tmp/derby_backup" />
+		<property name="url" value="jdbc:derby:directory:target/jpaserver_derby_files;createFrom=/tmp/derby_backup" />
 		<property name="driverClassName" value="org.apache.derby.jdbc.EmbeddedDriver"></property>
 		<property name="username" value=""/>
 		<property name="password" value=""/>
@@ -41,7 +41,7 @@
 			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
 				<property name="showSql" value="false" />
 				<property name="generateDdl" value="true" />
-				<property name="databasePlatform" value="org.hibernate.dialect.DerbyTenSevenDialect" />
+				<property name="databasePlatform" value="ca.uhn.fhir.jpa.util.HapiDerbyTenSevenDialect" />
 			</bean>
 		</property>
 	</bean>

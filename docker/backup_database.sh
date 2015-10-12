@@ -5,7 +5,7 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-SRC=/usr/local/tomcat/jpaserver_derby_files
+SRC=/usr/local/tomcat/target/jpaserver_derby_files
 BKDIR=/tmp/derby_backup
 BKFILE=/tmp/derby_backup.tar.gz
 
