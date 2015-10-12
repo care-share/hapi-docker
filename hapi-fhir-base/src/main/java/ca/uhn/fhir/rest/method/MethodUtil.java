@@ -1,6 +1,7 @@
 package ca.uhn.fhir.rest.method;
 
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.io.IOException;
 import java.io.PushbackReader;
@@ -83,6 +84,7 @@ import ca.uhn.fhir.rest.param.ResourceParameter.Mode;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TransactionParameter;
+import ca.uhn.fhir.rest.param.UriAndListParam;
 import ca.uhn.fhir.rest.server.Constants;
 import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.IDynamicSearchResourceProvider;
@@ -628,6 +630,9 @@ public class MethodUtil {
 			break;
 		case TOKEN:
 			binder = new QueryParameterAndBinder(TokenAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
+			break;
+		case URI:
+			binder = new QueryParameterAndBinder(UriAndListParam.class, Collections.<Class<? extends IQueryParameterType>> emptyList());
 			break;
 		}
 

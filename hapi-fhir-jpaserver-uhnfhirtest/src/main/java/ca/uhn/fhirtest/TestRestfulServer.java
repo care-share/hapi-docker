@@ -8,16 +8,19 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.web.context.ContextLoaderListener;
 import org.springframework.web.context.WebApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.jpa.dao.DaoConfig;
 import ca.uhn.fhir.jpa.dao.IFhirSystemDao;
 import ca.uhn.fhir.jpa.provider.JpaConformanceProviderDstu1;
 import ca.uhn.fhir.jpa.provider.JpaConformanceProviderDstu2;
 import ca.uhn.fhir.jpa.provider.JpaSystemProviderDstu1;
 import ca.uhn.fhir.jpa.provider.JpaSystemProviderDstu2;
+import ca.uhn.fhir.jpa.util.SubscriptionsRequireManualActivationInterceptor;
 import ca.uhn.fhir.narrative.DefaultThymeleafNarrativeGenerator;
 import ca.uhn.fhir.rest.server.ETagSupportEnum;
 import ca.uhn.fhir.rest.server.EncodingEnum;
@@ -34,7 +37,7 @@ public class TestRestfulServer extends RestfulServer {
 
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(TestRestfulServer.class);
 
-	private ClassPathXmlApplicationContext myAppCtx;
+	private ApplicationContext myAppCtx;
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -43,6 +46,7 @@ public class TestRestfulServer extends RestfulServer {
 
 		// Get the spring context from the web container (it's declared in web.xml)
 		WebApplicationContext parentAppCtx = ContextLoaderListener.getCurrentWebApplicationContext();
+		myAppCtx = (parentAppCtx);
 
 		// These two parmeters are also declared in web.xml
 		String implDesc = getInitParameter("ImplementationDescription");
@@ -63,9 +67,6 @@ public class TestRestfulServer extends RestfulServer {
 		String baseUrlProperty;
 		switch (fhirVersionParam.trim().toUpperCase()) {
 		case "DSTU1": {
-			myAppCtx = new ClassPathXmlApplicationContext(new String[] { 
-					"hapi-fhir-server-database-config-dstu1.xml", 
-					"hapi-fhir-server-resourceproviders-dstu1.xml"}, parentAppCtx);
 			setFhirContext(FhirContext.forDstu1());
 			beans = myAppCtx.getBean("myResourceProvidersDstu1", List.class);
 			systemProviderDstu1 = myAppCtx.getBean("mySystemProviderDstu1", JpaSystemProviderDstu1.class);
@@ -78,19 +79,16 @@ public class TestRestfulServer extends RestfulServer {
 			break;
 		}
 		case "DSTU2": {
-			myAppCtx = new ClassPathXmlApplicationContext(new String[] {
-					"hapi-fhir-server-database-config-dstu2.xml", 
-					"hapi-fhir-server-resourceproviders-dstu2.xml", 
-					}, parentAppCtx);
 			setFhirContext(FhirContext.forDstu2());
 			beans = myAppCtx.getBean("myResourceProvidersDstu2", List.class);
 			systemProviderDstu2 = myAppCtx.getBean("mySystemProviderDstu2", JpaSystemProviderDstu2.class);
 			systemDao = myAppCtx.getBean("mySystemDaoDstu2", IFhirSystemDao.class);
 			etagSupport = ETagSupportEnum.ENABLED;
-			JpaConformanceProviderDstu2 confProvider = new JpaConformanceProviderDstu2(this, systemDao);
+			JpaConformanceProviderDstu2 confProvider = new JpaConformanceProviderDstu2(this, systemDao, myAppCtx.getBean(DaoConfig.class));
 			confProvider.setImplementationDescription(implDesc);
 			setServerConformanceProvider(confProvider);
 			baseUrlProperty = "fhir.baseurl.dstu2";
+			registerInterceptor(myAppCtx.getBean("mySubscriptionSecurityInterceptor", SubscriptionsRequireManualActivationInterceptor.class));
 			break;
 		}
 		default:

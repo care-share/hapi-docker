@@ -48,6 +48,7 @@ import ca.uhn.fhir.rest.server.Constants;
 import ca.uhn.fhir.rest.server.EncodingEnum;
 import ca.uhn.fhir.rest.server.IVersionSpecificBundleFactory;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import ca.uhn.fhir.util.UrlUtil;
 
 /**
  * @author James Agnew
@@ -298,7 +299,7 @@ abstract class BaseHttpClientInvocationWithContents extends BaseHttpClientInvoca
 		}
 
 		HttpRequestBase retVal = createRequest(url, entity);
-		super.addHeadersToRequest(retVal);
+		super.addHeadersToRequest(retVal, encoding);
 		addMatchHeaders(retVal, url);
 
 		if (contentType != null) {

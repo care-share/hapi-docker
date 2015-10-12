@@ -25,8 +25,11 @@ import javax.annotation.PostConstruct;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.jpa.entity.ResourceTable;
 import ca.uhn.fhir.model.dstu2.resource.OperationOutcome;
 import ca.uhn.fhir.model.dstu2.resource.Questionnaire;
 import ca.uhn.fhir.model.dstu2.resource.QuestionnaireResponse;
@@ -40,7 +43,10 @@ import ca.uhn.fhir.validation.ValidationResult;
 
 public class FhirResourceDaoQuestionnaireResponseDstu2 extends FhirResourceDaoDstu2<QuestionnaireResponse> {
 
+	@Autowired
+	@Qualifier("myFhirContextDstu2Hl7Org")
 	private FhirContext myRefImplCtx;
+	
 	private Boolean myValidateResponses;
 
 	/**
@@ -51,15 +57,14 @@ public class FhirResourceDaoQuestionnaireResponseDstu2 extends FhirResourceDaoDs
 		try {
 			Class.forName("org.hl7.fhir.instance.model.QuestionnaireResponse");
 			myValidateResponses = true;
-			myRefImplCtx = FhirContext.forDstu2Hl7Org();
 		} catch (ClassNotFoundException e) {
 			myValidateResponses = Boolean.FALSE;
 		}
 	}
 	
 	@Override
-	protected void validateResourceForStorage(QuestionnaireResponse theResource) {
-		super.validateResourceForStorage(theResource);
+	protected void validateResourceForStorage(QuestionnaireResponse theResource, ResourceTable theEntityToSave) {
+		super.validateResourceForStorage(theResource, theEntityToSave);
 		if (!myValidateResponses) {
 			return;
 		}

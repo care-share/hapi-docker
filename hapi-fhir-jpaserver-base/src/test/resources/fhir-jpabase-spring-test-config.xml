@@ -33,13 +33,13 @@
 				<property name="showSql" value="false" />
 				<property name="generateDdl" value="true" />
 				<!-- <property name="databasePlatform" value="org.hibernate.dialect.HSQLDialect" />  -->
-				<property name="databasePlatform" value="org.hibernate.dialect.DerbyTenSevenDialect" />
+				<property name="databasePlatform" value="ca.uhn.fhir.jpa.util.HapiDerbyTenSevenDialect" />
 			</bean>
 		</property>
 	</bean>
-	<bean id="myTxManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
 		<property name="entityManagerFactory" ref="entityManagerFactory" />
 	</bean>
-	<tx:annotation-driven transaction-manager="myTxManager" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
 
 </beans>

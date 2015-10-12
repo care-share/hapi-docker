@@ -24,18 +24,22 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.instance.model.api.IBaseDatatype;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition.IAccessor;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.IRuntimeDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeChildPrimitiveDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimePrimitiveDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -44,10 +48,12 @@ import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.api.ValidationModeEnum;
 import ca.uhn.fhir.rest.param.CollectionBinder;
+import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ResourceParameter;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.MethodNotAllowedException;
+import ca.uhn.fhir.util.FhirTerser;
 import ca.uhn.fhir.util.ParametersUtil;
 
 public class OperationParameter implements IParameter {
@@ -62,6 +68,7 @@ public class OperationParameter implements IParameter {
 	private Class<?> myParameterType;
 	private String myParamType;
 	private FhirContext myContext;
+	private boolean myAllowGet;
 
 	public OperationParameter(FhirContext theCtx, String theOperationName, OperationParam theOperationParam) {
 		this(theCtx, theOperationName, theOperationParam.name(), theOperationParam.min(), theOperationParam.max());
@@ -103,6 +110,8 @@ public class OperationParameter implements IParameter {
 			myMax = 1;
 		}
 		
+		myAllowGet = IPrimitiveType.class.isAssignableFrom(myParameterType);
+		
 		/*
 		 * The parameter can be of type string for validation methods - This is a bit
 		 * weird. See ValidateDstu2Test. We should probably clean this up..
@@ -110,6 +119,10 @@ public class OperationParameter implements IParameter {
 		if (!myParameterType.equals(IBase.class) && !myParameterType.equals(String.class)) {
 			if (IBaseResource.class.isAssignableFrom(myParameterType) && myParameterType.isInterface()) {
 				myParamType = "Resource";
+			} else if (DateRangeParam.class.isAssignableFrom(myParameterType)) {
+				myParamType = "date";
+				myMax = 2;
+				myAllowGet = true;
 			} else if (!IBase.class.isAssignableFrom(myParameterType) || myParameterType.isInterface() || Modifier.isAbstract(myParameterType.getModifiers())) {
 				throw new ConfigurationException("Invalid type for @OperationParam: " + myParameterType.getName());
 			} else if (myParameterType.equals(ValidationModeEnum.class)) {
@@ -149,13 +162,25 @@ public class OperationParameter implements IParameter {
 		if (theRequest.getRequestType() == RequestTypeEnum.GET) {
 			String[] paramValues = theRequest.getParameters().get(myName);
 			if (paramValues != null && paramValues.length > 0) {
-				if (IPrimitiveType.class.isAssignableFrom(myParameterType)) {
-					for (String nextValue : paramValues) {
-						FhirContext ctx = theRequest.getServer().getFhirContext();
-						RuntimePrimitiveDatatypeDefinition def = (RuntimePrimitiveDatatypeDefinition) ctx.getElementDefinition((Class<? extends IBase>) myParameterType);
-						IPrimitiveType<?> instance = def.newInstance();
-						instance.setValueAsString(nextValue);
-						matchingParamValues.add(instance);
+				if (myAllowGet) {
+					
+					if (DateRangeParam.class.isAssignableFrom(myParameterType)) {
+						List<QualifiedParamList> parameters = new ArrayList<QualifiedParamList>();
+						parameters.add(QualifiedParamList.singleton(paramValues[0]));
+						if (paramValues.length > 1) {
+							parameters.add(QualifiedParamList.singleton(paramValues[1]));
+						}
+						DateRangeParam dateRangeParam = new DateRangeParam();
+						dateRangeParam.setValuesAsQueryTokens(parameters);
+						matchingParamValues.add(dateRangeParam);
+					} else {
+						for (String nextValue : paramValues) {
+							FhirContext ctx = theRequest.getServer().getFhirContext();
+							RuntimePrimitiveDatatypeDefinition def = (RuntimePrimitiveDatatypeDefinition) ctx.getElementDefinition((Class<? extends IBase>) myParameterType);
+							IPrimitiveType<?> instance = def.newInstance();
+							instance.setValueAsString(nextValue);
+							matchingParamValues.add(instance);
+						}
 					}
 				} else {
 					HapiLocalizer localizer = theRequest.getServer().getFhirContext().getLocalizer();
@@ -229,6 +254,7 @@ public class OperationParameter implements IParameter {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void tryToAddValues(List<IBase> theParamValues, List<Object> theMatchingParamValues) {
 		for (Object nextValue : theParamValues) {
 			if (nextValue == null) {
@@ -238,10 +264,28 @@ public class OperationParameter implements IParameter {
 				nextValue = myConverter.incomingServer(nextValue);
 			}
 			if (!myParameterType.isAssignableFrom(nextValue.getClass())) {
-				throw new InvalidRequestException("Request has parameter " + myName + " of type " + nextValue.getClass().getSimpleName() + " but method expects type " + myParameterType.getSimpleName());
+				Class<? extends IBaseDatatype> sourceType = (Class<? extends IBaseDatatype>) nextValue.getClass();
+				Class<? extends IBaseDatatype> targetType = (Class<? extends IBaseDatatype>) myParameterType;
+				BaseRuntimeElementDefinition<?> sourceTypeDef = myContext.getElementDefinition(sourceType);
+				BaseRuntimeElementDefinition<?> targetTypeDef = myContext.getElementDefinition(targetType);
+				if (targetTypeDef instanceof IRuntimeDatatypeDefinition && sourceTypeDef instanceof IRuntimeDatatypeDefinition) {
+					IRuntimeDatatypeDefinition targetTypeDtDef = (IRuntimeDatatypeDefinition) targetTypeDef;
+					if (targetTypeDtDef.isProfileOf(sourceType)) {
+						FhirTerser terser = myContext.newTerser();
+						IBase newTarget = targetTypeDef.newInstance();
+						terser.cloneInto((IBase) nextValue, newTarget, true);
+						theMatchingParamValues.add(newTarget);
+						continue;
+					}
+				}
+				throwWrongParamType(nextValue);
 			}
 			theMatchingParamValues.add(nextValue);
 		}
+	}
+
+	private void throwWrongParamType(Object nextValue) {
+		throw new InvalidRequestException("Request has parameter " + myName + " of type " + nextValue.getClass().getSimpleName() + " but method expects type " + myParameterType.getSimpleName());
 	}
 
 	public interface IConverter {

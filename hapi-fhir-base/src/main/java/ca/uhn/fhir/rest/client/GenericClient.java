@@ -19,7 +19,8 @@ package ca.uhn.fhir.rest.client;
  * limitations under the License.
  * #L%
  */
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -42,17 +43,20 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseConformance;
+import org.hl7.fhir.instance.model.api.IBaseDatatype;
 import org.hl7.fhir.instance.model.api.IBaseMetaType;
 import org.hl7.fhir.instance.model.api.IBaseParameters;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
 
+import ca.uhn.fhir.context.BaseRuntimeChildDatatypeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import ca.uhn.fhir.context.IRuntimeDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.model.api.Bundle;
 import ca.uhn.fhir.model.api.IQueryParameterType;
@@ -100,6 +104,7 @@ import ca.uhn.fhir.rest.gclient.IOperation;
 import ca.uhn.fhir.rest.gclient.IOperationUnnamed;
 import ca.uhn.fhir.rest.gclient.IOperationUntyped;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInputAndPartialOutput;
 import ca.uhn.fhir.rest.gclient.IParam;
 import ca.uhn.fhir.rest.gclient.IQuery;
 import ca.uhn.fhir.rest.gclient.IRead;
@@ -142,6 +147,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
 import ca.uhn.fhir.util.ICallable;
 import ca.uhn.fhir.util.ParametersUtil;
+import ca.uhn.fhir.util.UrlUtil;
 
 /**
  * @author James Agnew
@@ -229,7 +235,8 @@ public class GenericClient extends BaseClient implements IGenericClient {
 		return delete(theType, new IdDt(theId));
 	}
 
-	private <T extends IBaseResource> T doReadOrVRead(final Class<T> theType, IIdType theId, boolean theVRead, ICallable<T> theNotModifiedHandler, String theIfVersionMatches, Boolean thePrettyPrint, SummaryEnum theSummary, EncodingEnum theEncoding, Set<String> theSubsetElements) {
+	private <T extends IBaseResource> T doReadOrVRead(final Class<T> theType, IIdType theId, boolean theVRead, ICallable<T> theNotModifiedHandler, String theIfVersionMatches, Boolean thePrettyPrint,
+			SummaryEnum theSummary, EncodingEnum theEncoding, Set<String> theSubsetElements) {
 		String resName = toResourceName(theType);
 		IIdType id = theId;
 		if (!id.hasBaseUrl()) {
@@ -721,7 +728,7 @@ public class GenericClient extends BaseClient implements IGenericClient {
 
 		@Override
 		public ICreateTyped conditionalByUrl(String theSearchUrl) {
-			mySearchUrl = theSearchUrl;
+			mySearchUrl = validateAndEscapeConditionalUrl(theSearchUrl);
 			return this;
 		}
 
@@ -896,14 +903,21 @@ public class GenericClient extends BaseClient implements IGenericClient {
 
 		@Override
 		public IDeleteTyped resourceConditionalByUrl(String theSearchUrl) {
-			Validate.notBlank(theSearchUrl, "theSearchUrl can not be blank/null");
-			mySearchUrl = theSearchUrl;
+			mySearchUrl = validateAndEscapeConditionalUrl(theSearchUrl);
 			return this;
 		}
 
 		@Override
 		public IDeleteWithQueryTyped where(ICriterion<?> theCriterion) {
 			myCriterionList.add((ICriterionInternal) theCriterion);
+			return this;
+		}
+
+		@Override
+		public IDeleteWithQuery resourceConditionalByType(Class<? extends IBaseResource> theResourceType) {
+			Validate.notNull(theResourceType, "theResourceType can not be null");
+			myCriterionList = new CriterionList();
+			myResourceType = myContext.getResourceDefinition(theResourceType).getName();
 			return this;
 		}
 	}
@@ -916,7 +930,7 @@ public class GenericClient extends BaseClient implements IGenericClient {
 		public Object execute() {
 			ResourceResponseHandler binding = new ResourceResponseHandler(myType.getImplementingClass(), null);
 			HttpGetClientInvocation invocation = MethodUtil.createConformanceInvocation();
-			return invokeClient(myContext, binding, invocation, myLogRequestAndResponse);
+			return super.invoke(null, binding, invocation);
 		}
 
 		@Override
@@ -1353,13 +1367,14 @@ public class GenericClient extends BaseClient implements IGenericClient {
 	}
 
 	@SuppressWarnings("rawtypes")
-	private class OperationInternal extends BaseClientExecutable implements IOperation, IOperationUnnamed, IOperationUntyped, IOperationUntypedWithInput {
+	private class OperationInternal extends BaseClientExecutable implements IOperation, IOperationUnnamed, IOperationUntyped, IOperationUntypedWithInput, IOperationUntypedWithInputAndPartialOutput {
 
 		private IIdType myId;
 		private String myOperationName;
 		private IBaseParameters myParameters;
 		private Class<? extends IBaseResource> myType;
 		private boolean myUseHttpGet;
+		private RuntimeResourceDefinition myParametersDef;
 
 		@SuppressWarnings("unchecked")
 		@Override
@@ -1455,6 +1470,59 @@ public class GenericClient extends BaseClient implements IGenericClient {
 			return this;
 		}
 
+		@SuppressWarnings("unchecked")
+		@Override
+		public <T extends IBaseParameters> IOperationUntypedWithInputAndPartialOutput<T> withParameter(Class<T> theParameterType, String theName, IBase theValue) {
+			Validate.notNull(theParameterType, "theParameterType must not be null");
+			Validate.notEmpty(theName, "theName must not be null");
+			Validate.notNull(theValue, "theValue must not be null");
+
+			myParametersDef = myContext.getResourceDefinition(theParameterType);
+			myParameters = (IBaseParameters) myParametersDef.newInstance();
+
+			addParam(theName, theValue);
+
+			return this;
+		}
+
+		@SuppressWarnings("unchecked")
+		private void addParam(String theName, IBase theValue) {
+			BaseRuntimeChildDefinition parameterChild = myParametersDef.getChildByName("parameter");
+			BaseRuntimeElementCompositeDefinition<?> parameterElem = (BaseRuntimeElementCompositeDefinition<?>) parameterChild.getChildByName("parameter");
+
+			IBase parameter = parameterElem.newInstance();
+			parameterChild.getMutator().addValue(myParameters, parameter);
+
+			IPrimitiveType<String> name = (IPrimitiveType<String>) myContext.getElementDefinition("string").newInstance();
+			name.setValue(theName);
+			parameterElem.getChildByName("name").getMutator().setValue(parameter, name);
+
+			if (theValue instanceof IBaseDatatype) {
+				BaseRuntimeElementDefinition<?> datatypeDef = myContext.getElementDefinition(theValue.getClass());
+				if (datatypeDef instanceof IRuntimeDatatypeDefinition) {
+					Class<? extends IBaseDatatype> profileOf = ((IRuntimeDatatypeDefinition) datatypeDef).getProfileOf();
+					if (profileOf != null) {
+						datatypeDef = myContext.getElementDefinition(profileOf);
+					}
+				}
+				String childElementName = "value" + StringUtils.capitalize(datatypeDef.getName());
+				BaseRuntimeChildDefinition childByName = parameterElem.getChildByName(childElementName);
+				childByName.getMutator().setValue(parameter, theValue);
+			} else if (theValue instanceof IBaseResource) {
+				parameterElem.getChildByName("resource").getMutator().setValue(parameter, theValue);
+			} else {
+				throw new IllegalArgumentException("Don't know how to handle parameter of type " + theValue.getClass());
+			}
+		}
+
+		@Override
+		public IOperationUntypedWithInputAndPartialOutput andParameter(String theName, IBase theValue) {
+			Validate.notEmpty(theName, "theName must not be null");
+			Validate.notNull(theValue, "theValue must not be null");
+			addParam(theName, theValue);
+			return this;
+		}
+
 	}
 
 	private final class OperationOutcomeResponseHandler implements IClientResponseHandler<BaseOperationOutcome> {
@@ -1506,7 +1574,7 @@ public class GenericClient extends BaseClient implements IGenericClient {
 		private RuntimeResourceDefinition myType;
 
 		@Override
-		public Object execute() {//AAA
+		public Object execute() {// AAA
 			if (myId.hasVersionIdPart()) {
 				return doReadOrVRead(myType.getImplementingClass(), myId, true, myNotModifiedHandler, myIfVersionMatches, myPrettyPrint, mySummaryMode, myParamEncoding, getSubsetElements());
 			} else {
@@ -1693,16 +1761,14 @@ public class GenericClient extends BaseClient implements IGenericClient {
 			BaseRuntimeElementCompositeDefinition<?> textElement = (BaseRuntimeElementCompositeDefinition<?>) textChild.getChildByName("text");
 			IBase textInstance = textElement.newInstance();
 			textChild.getMutator().addValue(instance, textInstance);
-			
+
 			BaseRuntimeChildDefinition divChild = textElement.getChildByName("div");
 			BaseRuntimeElementDefinition<?> divElement = divChild.getChildByName("div");
 			IPrimitiveType<?> divInstance = (IPrimitiveType<?>) divElement.newInstance();
 			try {
 				divInstance.setValueAsString(IOUtils.toString(theResponseReader));
-			} catch (IllegalArgumentException e) {
-				throw new InvalidResponseException(400, "Failed to process HTML response from server", e);
-			} catch (IOException e) {
-				throw new InvalidResponseException(400, "Failed to process HTML response from server", e);
+			} catch (Exception e) {
+				throw new InvalidResponseException(400, "Failed to process HTML response from server: " + e.getMessage(), e);
 			}
 			divChild.getMutator().addValue(textInstance, divInstance);
 			return (T) instance;
@@ -1727,10 +1793,12 @@ public class GenericClient extends BaseClient implements IGenericClient {
 		private List<TokenParam> mySecurity = new ArrayList<TokenParam>();
 		private List<SortInternal> mySort = new ArrayList<SortInternal>();
 		private List<TokenParam> myTags = new ArrayList<TokenParam>();
+		private String mySearchUrl;
 
 		public SearchInternal() {
 			myResourceType = null;
 			myResourceName = null;
+			mySearchUrl = null;
 		}
 
 		@Override
@@ -1802,7 +1870,12 @@ public class GenericClient extends BaseClient implements IGenericClient {
 
 			IdDt resourceId = myResourceId != null ? new IdDt(myResourceId) : null;
 
-			BaseHttpClientInvocation invocation = SearchMethodBinding.createSearchInvocation(myContext, myResourceName, params, resourceId, myCompartmentName, mySearchStyle);
+			BaseHttpClientInvocation invocation;
+			if (mySearchUrl != null) {
+				invocation = SearchMethodBinding.createSearchInvocation(mySearchUrl, params);
+			} else {
+				invocation = SearchMethodBinding.createSearchInvocation(myContext, myResourceName, params, resourceId, myCompartmentName, mySearchStyle);
+			}
 
 			return invoke(params, binding, invocation);
 
@@ -1917,6 +1990,34 @@ public class GenericClient extends BaseClient implements IGenericClient {
 		public IQuery<Object> withTag(String theSystem, String theCode) {
 			Validate.notBlank(theCode, "theCode must not be null or empty");
 			myTags.add(new TokenParam(theSystem, theCode));
+			return this;
+		}
+
+		@Override
+		public IQuery byUrl(String theSearchUrl) {
+			Validate.notBlank(theSearchUrl, "theSearchUrl must not be blank/null");
+
+			if (theSearchUrl.startsWith("http://") || theSearchUrl.startsWith("https://")) {
+				mySearchUrl = theSearchUrl;
+				int qIndex = mySearchUrl.indexOf('?');
+				if (qIndex != -1) {
+					mySearchUrl = mySearchUrl.substring(0, qIndex) + validateAndEscapeConditionalUrl(mySearchUrl.substring(qIndex));
+				}
+			} else {
+				String searchUrl = theSearchUrl;
+				if (searchUrl.startsWith("/")) {
+					searchUrl = searchUrl.substring(1);
+				}
+				if (!searchUrl.matches("[a-zA-Z]+($|\\?.*)")) {
+					throw new IllegalArgumentException("Search URL must be either a complete URL starting with http: or https:, or a relative FHIR URL in the form [ResourceType]?[Params]");
+				}
+				int qIndex = searchUrl.indexOf('?');
+				if (qIndex == -1) {
+					mySearchUrl = getUrlBase() + '/' + searchUrl;
+				} else {
+					mySearchUrl = getUrlBase() + '/' + validateAndEscapeConditionalUrl(searchUrl);
+				}
+			}
 			return this;
 		}
 
@@ -2099,7 +2200,7 @@ public class GenericClient extends BaseClient implements IGenericClient {
 
 		@Override
 		public IUpdateTyped conditionalByUrl(String theSearchUrl) {
-			mySearchUrl = theSearchUrl;
+			mySearchUrl = validateAndEscapeConditionalUrl(theSearchUrl);
 			return this;
 		}
 
@@ -2233,6 +2334,36 @@ public class GenericClient extends BaseClient implements IGenericClient {
 			return this;
 		}
 
+	}
+
+	private static String validateAndEscapeConditionalUrl(String theSearchUrl) {
+		Validate.notBlank(theSearchUrl, "Conditional URL can not be blank/null");
+		StringBuilder b = new StringBuilder();
+		boolean haveHadQuestionMark = false;
+		for (int i = 0; i < theSearchUrl.length(); i++) {
+			char nextChar = theSearchUrl.charAt(i);
+			if (!haveHadQuestionMark) {
+				if (nextChar == '?') {
+					haveHadQuestionMark = true;
+				} else if (!Character.isLetter(nextChar)) {
+					throw new IllegalArgumentException("Conditional URL must be in the format \"[ResourceType]?[Params]\" and must not have a base URL - Found: " + theSearchUrl);
+				}
+				b.append(nextChar);
+			} else {
+				switch (nextChar) {
+				case '|':
+				case '?':
+				case '$':
+				case ':':
+					b.append(UrlUtil.escape(Character.toString(nextChar)));
+					break;
+				default:
+					b.append(nextChar);
+					break;
+				}
+			}
+		}
+		return b.toString();
 	}
 
 }

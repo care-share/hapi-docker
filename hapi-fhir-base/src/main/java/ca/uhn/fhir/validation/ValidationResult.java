@@ -28,6 +28,7 @@ import java.util.List;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.interceptor.ExceptionHandlingInterceptor;
 import ca.uhn.fhir.util.OperationOutcomeUtil;
 
 /**
@@ -59,7 +60,10 @@ public class ValidationResult {
 	}
 
 	/**
-	 * Was the validation successful
+	 * Was the validation successful (in other words, do we have no issues that are at
+	 * severity {@link ResultSeverityEnum#ERROR} or {@link ResultSeverityEnum#FATAL}. A validation
+	 * is still considered successful if it only has issues at level {@link ResultSeverityEnum#WARNING} or
+	 * lower. 
 	 * 
 	 * @return true if the validation was successful
 	 */
@@ -104,7 +108,7 @@ public class ValidationResult {
 				location = null;
 			}
 			String severity = next.getSeverity() != null ? next.getSeverity().getCode() : null;
-			OperationOutcomeUtil.addIssue(myCtx, oo, severity, next.getMessage(), location);
+			OperationOutcomeUtil.addIssue(myCtx, oo, severity, next.getMessage(), location, ExceptionHandlingInterceptor.PROCESSING);
 		}
 
 		return oo;

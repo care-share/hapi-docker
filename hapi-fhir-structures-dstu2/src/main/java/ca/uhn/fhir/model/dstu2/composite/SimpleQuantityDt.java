@@ -7,7 +7,7 @@ import ca.uhn.fhir.model.dstu2.valueset.QuantityComparatorEnum;
 
 /*
  * #%L
- * HAPI FHIR Structures - DSTU2 (FHIR v0.5.0)
+ * HAPI FHIR Structures - DSTU2 (FHIR v1.0.0)
  * %%
  * Copyright (C) 2014 - 2015 University Health Network
  * %%
@@ -25,7 +25,7 @@ import ca.uhn.fhir.model.dstu2.valueset.QuantityComparatorEnum;
  * #L%
  */
 
-@DatatypeDef(name="SimpleQuantity") 
+@DatatypeDef(name="SimpleQuantity", profileOf=QuantityDt.class) 
 public class SimpleQuantityDt extends QuantityDt {
 
 	private static final long serialVersionUID = 1L;

@@ -21,8 +21,8 @@ package ca.uhn.fhir.jpa.dao;
  */
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -35,12 +35,14 @@ import ca.uhn.fhir.model.api.IQueryParameterType;
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.param.DateRangeParam;
+import ca.uhn.fhir.rest.server.Constants;
 
-public class SearchParameterMap extends HashMap<String, List<List<? extends IQueryParameterType>>> {
+public class SearchParameterMap extends LinkedHashMap<String, List<List<? extends IQueryParameterType>>> {
 
 	private static final long serialVersionUID = 1L;
 
 	private Integer myCount;
+	private EverythingModeEnum myEverythingMode = null;
 	private Set<Include> myIncludes;
 	private DateRangeParam myLastUpdated;
 	private Set<Include> myRevIncludes;
@@ -75,6 +77,8 @@ public class SearchParameterMap extends HashMap<String, List<List<? extends IQue
 	}
 
 	public void add(String theName, IQueryParameterType theParam) {
+		assert!Constants.PARAM_LASTUPDATED.equals(theName); // this has it's own field in the map
+
 		if (theParam == null) {
 			return;
 		}
@@ -88,6 +92,10 @@ public class SearchParameterMap extends HashMap<String, List<List<? extends IQue
 
 	public void addInclude(Include theInclude) {
 		getIncludes().add(theInclude);
+	}
+
+	public void addRevInclude(Include theInclude) {
+		getRevIncludes().add(theInclude);
 	}
 
 	public Integer getCount() {
@@ -106,6 +114,9 @@ public class SearchParameterMap extends HashMap<String, List<List<? extends IQue
 	}
 
 	public Set<Include> getRevIncludes() {
+		if (myRevIncludes == null) {
+			myRevIncludes = new HashSet<Include>();
+		}
 		return myRevIncludes;
 	}
 
@@ -113,8 +124,16 @@ public class SearchParameterMap extends HashMap<String, List<List<? extends IQue
 		return mySort;
 	}
 
+	public EverythingModeEnum getEverythingMode() {
+		return myEverythingMode;
+	}
+
 	public void setCount(Integer theCount) {
 		myCount = theCount;
+	}
+
+	public void setEverythingMode(EverythingModeEnum theConsolidateMatches) {
+		myEverythingMode = theConsolidateMatches;
 	}
 
 	public void setIncludes(Set<Include> theIncludes) {
@@ -143,6 +162,39 @@ public class SearchParameterMap extends HashMap<String, List<List<? extends IQue
 			b.append("includes", getIncludes());
 		}
 		return b.toString();
+	}
+
+	public enum EverythingModeEnum {
+		//@formatter:off
+		PATIENT_TYPE(true, false, false), 
+		PATIENT_INSTANCE(true, false, true), 
+		ENCOUNTER_TYPE(false, true, false), 
+		ENCOUNTER_INSTANCE(false, true, true);
+		//@formatter:on
+
+		private final boolean myPatient;
+
+		public boolean isPatient() {
+			return myPatient;
+		}
+
+		public boolean isEncounter() {
+			return myEncounter;
+		}
+
+		public boolean isInstance() {
+			return myInstance;
+		}
+
+		private final boolean myEncounter;
+		private final boolean myInstance;
+
+		private EverythingModeEnum(boolean thePatient, boolean theEncounter, boolean theInstance) {
+			assert thePatient ^ theEncounter;
+			myPatient = thePatient;
+			myEncounter = theEncounter;
+			myInstance = theInstance;
+		}
 	}
 
 }

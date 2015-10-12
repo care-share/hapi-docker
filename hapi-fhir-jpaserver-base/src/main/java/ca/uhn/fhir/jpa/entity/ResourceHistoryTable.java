@@ -32,6 +32,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -41,16 +42,16 @@ import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.rest.server.Constants;
 
 @Entity
-@Table(name = "HFJ_RES_VER", uniqueConstraints = {@UniqueConstraint(name="IDX_RES_VER_ALL", columnNames = { "RES_ID", "RES_TYPE", "RES_VER" })})
-@org.hibernate.annotations.Table(appliesTo="HFJ_RES_VER", indexes= {@Index(name="IDX_RES_VER_DATE", columnNames= {"RES_UPDATED"})})
+@Table(name = "HFJ_RES_VER", uniqueConstraints = { @UniqueConstraint(name = "IDX_RES_VER_ALL", columnNames = { "RES_ID", "RES_TYPE", "RES_VER" }) })
+@org.hibernate.annotations.Table(appliesTo = "HFJ_RES_VER", indexes = { @Index(name = "IDX_RES_VER_DATE", columnNames = { "RES_UPDATED" }) })
 public class ResourceHistoryTable extends BaseHasResource implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-
 	@Id
-	@GeneratedValue(strategy=GenerationType.AUTO)
-	@Column(name="PID")
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@SequenceGenerator(name = "RES_HISTORY_PID", sequenceName = "RES_HISTORY_PID")
+	@Column(name = "PID")
 	private Long myId;
 
 	@Column(name = "RES_ID")
@@ -87,13 +88,14 @@ public class ResourceHistoryTable extends BaseHasResource implements Serializabl
 		return historyTag;
 	}
 
+	@Override
 	public Long getId() {
 		return myId;
 	}
 
 	@Override
 	public IdDt getIdDt() {
-		Object id = getForcedId()==null? getResourceId() : getForcedId().getForcedId();
+		Object id = getForcedId() == null ? getResourceId() : getForcedId().getForcedId();
 		return new IdDt(getResourceType() + '/' + id + '/' + Constants.PARAM_HISTORY + '/' + getVersion());
 	}
 
@@ -101,11 +103,12 @@ public class ResourceHistoryTable extends BaseHasResource implements Serializabl
 		return myResourceId;
 	}
 
+	@Override
 	public String getResourceType() {
 		return myResourceType;
 	}
 
-
+	@Override
 	public Collection<ResourceHistoryTag> getTags() {
 		if (myTags == null) {
 			myTags = new ArrayList<ResourceHistoryTag>();
@@ -132,11 +135,11 @@ public class ResourceHistoryTable extends BaseHasResource implements Serializabl
 	}
 
 	public void setResourceType(String theResourceType) {
-		myResourceType=theResourceType;
+		myResourceType = theResourceType;
 	}
 
 	public void setVersion(long theVersion) {
-		myResourceVersion=theVersion;
+		myResourceVersion = theVersion;
 	}
 
 }

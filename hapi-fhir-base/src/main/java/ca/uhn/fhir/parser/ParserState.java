@@ -633,8 +633,9 @@ class ParserState<T> {
 		public void attributeValue(String theName, String theValue) throws DataFormatException {
 			if (myJsonMode) {
 				string(theValue);
+			} else {
+				super.attributeValue(theName, theValue);
 			}
-			super.attributeValue(theName, theValue);
 		}
 
 		@Override
@@ -1075,6 +1076,8 @@ class ParserState<T> {
 			} else if ("fullUrl".equals(theLocalPart)) {
 				myFullUrl = new IdDt();
 				push(new PrimitiveState(getPreResourceState(), myFullUrl));
+			} else if ("fhir_comments".equals(theLocalPart) && myJsonMode) {
+				push(new SwallowChildrenWholeState(getPreResourceState()));
 			} else {
 				throw new DataFormatException("Unexpected element in entry: " + theLocalPart);
 			}
@@ -1551,6 +1554,8 @@ class ParserState<T> {
 				}
 			} else if ("url".equals(theName) && myInstance instanceof ExtensionDt) {
 				((ExtensionDt) myInstance).setUrl(theValue);
+			} else {
+				super.attributeValue(theName, theValue);
 			}
 		}
 

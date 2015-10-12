@@ -14,22 +14,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.Validate;
-import org.hl7.fhir.instance.formats.IParser;
-import org.hl7.fhir.instance.formats.ParserType;
-import org.hl7.fhir.instance.model.ConceptMap;
 import org.hl7.fhir.instance.model.OperationOutcome.IssueSeverity;
-import org.hl7.fhir.instance.model.Resource;
 import org.hl7.fhir.instance.model.StructureDefinition;
-import org.hl7.fhir.instance.model.ValueSet;
-import org.hl7.fhir.instance.model.ValueSet.ConceptSetComponent;
-import org.hl7.fhir.instance.model.ValueSet.ValueSetExpansionComponent;
-import org.hl7.fhir.instance.terminologies.ValueSetExpander;
-import org.hl7.fhir.instance.terminologies.ValueSetExpanderFactory;
-import org.hl7.fhir.instance.terminologies.ValueSetExpanderSimple;
-import org.hl7.fhir.instance.utils.EOperationOutcome;
-import org.hl7.fhir.instance.utils.INarrativeGenerator;
-import org.hl7.fhir.instance.utils.IWorkerContext;
-import org.hl7.fhir.instance.validation.IResourceValidator;
 import org.hl7.fhir.instance.validation.IResourceValidator.BestPracticeWarningLevel;
 import org.hl7.fhir.instance.validation.ValidationMessage;
 import org.w3c.dom.Document;
@@ -93,10 +79,17 @@ public class FhirInstanceValidator extends BaseValidatorBridge implements IValid
 
   /**
    * Returns the "best practice" warning level (default is
-   * {@link BestPracticeWarningLevel#Hint})
+   * {@link BestPracticeWarningLevel#Hint}).
+   * <p>
+   * The FHIR Instance Validator has a number of checks for best practices in
+   * terms of FHIR usage. If this setting is set to
+   * {@link BestPracticeWarningLevel#Error}, any resource data which does not
+   * meet these best practices will be reported at the ERROR level. If this
+   * setting is set to {@link BestPracticeWarningLevel#Ignore}, best practice
+   * guielines will be ignored.
+   * </p>
    * 
-   * @see #setBestPracticeWarningLevel(BestPracticeWarningLevel) for more
-   *      information on this value
+   * @see {@link #setBestPracticeWarningLevel(BestPracticeWarningLevel)}
    */
   public BestPracticeWarningLevel getBestPracticeWarningLevel() {
     return myBestPracticeWarningLevel;
@@ -115,10 +108,14 @@ public class FhirInstanceValidator extends BaseValidatorBridge implements IValid
   /**
    * Sets the "best practice warning level". When validating, any deviations
    * from best practices will be reported at this level.
-   * {@link BestPracticeWarningLevel#Ignore} means that best practice deviations
-   * will not be reported, {@link BestPracticeWarningLevel#Warning} means that
-   * best practice deviations will be reported as warnings, etc. Default is
-   * {@link BestPracticeWarningLevel#Hint}
+   * <p>
+   * The FHIR Instance Validator has a number of checks for best practices in
+   * terms of FHIR usage. If this setting is set to
+   * {@link BestPracticeWarningLevel#Error}, any resource data which does not
+   * meet these best practices will be reported at the ERROR level. If this
+   * setting is set to {@link BestPracticeWarningLevel#Ignore}, best practice
+   * guielines will be ignored.
+   * </p>
    * 
    * @param theBestPracticeWarningLevel
    *          The level, must not be <code>null</code>
@@ -139,7 +136,7 @@ public class FhirInstanceValidator extends BaseValidatorBridge implements IValid
   }
 
   protected List<ValidationMessage> validate(final FhirContext theCtx, String theInput, EncodingEnum theEncoding) {
-    HapiWorkerContext workerContext = new HapiWorkerContext(theCtx);
+    HapiWorkerContext workerContext = new HapiWorkerContext(theCtx, myValidationSupport);
 
     org.hl7.fhir.instance.validation.InstanceValidator v;
     try {
@@ -192,6 +189,13 @@ public class FhirInstanceValidator extends BaseValidatorBridge implements IValid
       throw new IllegalArgumentException("Unknown encoding: " + theEncoding);
     }
 
+    for (int i = 0; i < messages.size(); i++) {
+      ValidationMessage next = messages.get(i);
+      if ("Binding has no source, so can't be checked".equals(next.getMessage())) {
+        messages.remove(i);
+        i--;
+      }
+    }
     return messages;
   }
 
@@ -246,137 +250,6 @@ public class FhirInstanceValidator extends BaseValidatorBridge implements IValid
     StructureDefinition profile = getHl7OrgDstu2Ctx(theCtx).newXmlParser().parseResource(StructureDefinition.class,
         profileText);
     return profile;
-  }
-
-  private final class HapiWorkerContext implements IWorkerContext, ValueSetExpanderFactory, ValueSetExpander {
-    private final FhirContext myCtx;
-
-    // public StructureDefinition getProfile(String theId) {
-    // StructureDefinition retVal = super.getProfile(theId);
-    // if (retVal == null) {
-    // if (theId.startsWith("http://hl7.org/fhir/StructureDefinition/")) {
-    // retVal = loadProfileOrReturnNull(null, getHl7OrgDstu2Ctx(myCtx),
-    // theId.substring("http://hl7.org/fhir/StructureDefinition/".length()));
-    // if (retVal != null) {
-    // seeProfile(theId, retVal);
-    // }
-    // }
-    // }
-    // return retVal;
-    // }
-
-    private HapiWorkerContext(FhirContext theCtx) {
-      myCtx = theCtx;
-    }
-
-    @Override
-    public List<ConceptMap> allMaps() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ValueSetExpansionComponent expandVS(ConceptSetComponent theInc) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ValueSetExpansionOutcome expandVS(ValueSet theSource) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ValueSet fetchCodeSystem(String theSystem) {
-      if (myValidationSupport == null) {
-        return null;
-      } else {
-        return myValidationSupport.fetchCodeSystem(theSystem);
-      }
-    }
-
-    @Override
-    public <T extends Resource> T fetchResource(Class<T> theClass, String theUri) throws EOperationOutcome, Exception {
-      if (myValidationSupport == null) {
-        return null;
-      } else {
-        return myValidationSupport.fetchResource(myCtx, theClass, theUri);
-      }
-    }
-
-    @Override
-    public INarrativeGenerator getNarrativeGenerator(String thePrefix, String theBasePath) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IParser getParser(ParserType theType) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IParser getParser(String theType) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T extends Resource> boolean hasResource(Class<T> theClass_, String theUri) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IParser newJsonParser() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IResourceValidator newValidator() throws Exception {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IParser newXmlParser() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean supportsSystem(String theSystem) {
-      if (myValidationSupport == null) {
-        return false;
-      } else {
-        return myValidationSupport.isCodeSystemSupported(theSystem);
-      }
-    }
-
-    @Override
-    public ValidationResult validateCode(String theSystem, String theCode, String theDisplay) {
-      return myValidationSupport.validateCode(theSystem, theCode, theDisplay);
-    }
-
-    @Override
-    public ValidationResult validateCode(String theSystem, String theCode, String theDisplay,
-        ConceptSetComponent theVsi) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ValidationResult validateCode(String theSystem, String theCode, String theDisplay, ValueSet theVs) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ValueSetExpander getExpander() {
-      return this;
-    }
-
-    @Override
-    public ValueSetExpansionOutcome expand(ValueSet theSource) throws ETooCostly, Exception {
-      ValueSetExpander vse = new ValueSetExpanderSimple(this, this);
-      ValueSetExpansionOutcome vso = vse.expand(theSource);
-      if (vso.getError() != null) {
-        return null;
-      } else {
-        return vso;
-      }
-    }
   }
 
 }

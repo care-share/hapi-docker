@@ -50,7 +50,6 @@ import org.codehaus.stax2.XMLOutputFactory2;
 import org.codehaus.stax2.io.EscapingWriterFactory;
 
 import com.ctc.wstx.api.WstxInputProperties;
-import com.ctc.wstx.stax.WstxInputFactory;
 import com.ctc.wstx.stax.WstxOutputFactory;
 
 /**
@@ -69,6 +68,7 @@ public class XmlUtil {
 	private static volatile XMLInputFactory ourInputFactory;
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(XmlUtil.class);
 	private static volatile XMLOutputFactory ourOutputFactory;
+	private static XMLOutputFactory ourFragmentOutputFactory;
 	private static final Map<String, Integer> VALID_ENTITY_NAMES;
 	private static final ExtendedEntityReplacingXmlResolver XML_RESOLVER = new ExtendedEntityReplacingXmlResolver();
 
@@ -1540,6 +1540,12 @@ public class XmlUtil {
 		return retVal;
 	}
 
+	public static XMLEventWriter createXmlFragmentWriter(Writer theWriter) throws FactoryConfigurationError, XMLStreamException {
+		XMLOutputFactory outputFactory = getOrCreateFragmentOutputFactory();
+		XMLEventWriter retVal = outputFactory.createXMLEventWriter(theWriter);
+		return retVal;
+	}
+
 	public static XMLEventWriter createXmlWriter(Writer theWriter) throws FactoryConfigurationError, XMLStreamException {
 		XMLOutputFactory outputFactory = getOrCreateOutputFactory();
 		XMLEventWriter retVal = outputFactory.createXMLEventWriter(theWriter);
@@ -1550,6 +1556,7 @@ public class XmlUtil {
 		if (ourInputFactory == null) {
 
 			try {
+				// Detect if we're running with the Android lib, and force repackaged Woodstox to be used
 				Class.forName("ca.uhn.fhir.repackage.javax.xml.stream.XMLInputFactory");
 				System.setProperty("javax.xml.stream.XMLInputFactory", "com.ctc.wstx.stax.WstxInputFactory");
 			} catch (ClassNotFoundException e) {
@@ -1575,7 +1582,11 @@ public class XmlUtil {
 				if (inputFactory instanceof com.ctc.wstx.stax.WstxInputFactory) {
 					// inputFactory.setProperty(WstxInputFactory.IS_REPLACING_ENTITY_REFERENCES, false);
 					inputFactory.setProperty(WstxInputProperties.P_UNDECLARED_ENTITY_RESOLVER, XML_RESOLVER);
-					inputFactory.setProperty(WstxInputProperties.P_MAX_ATTRIBUTE_SIZE, "100000000");
+					try {
+						inputFactory.setProperty(WstxInputProperties.P_MAX_ATTRIBUTE_SIZE, "100000000");
+					} catch (IllegalArgumentException e) {
+						// ignore
+					}
 				}
 			} catch (ClassNotFoundException e) {
 				ourLog.debug("WstxOutputFactory (Woodstox) not found on classpath");
@@ -1585,37 +1596,53 @@ public class XmlUtil {
 		return ourInputFactory;
 	}
 
+	private static XMLOutputFactory getOrCreateFragmentOutputFactory() throws FactoryConfigurationError {
+		XMLOutputFactory retVal = ourFragmentOutputFactory;
+		if (retVal == null) {
+			retVal = createOutputFactory();
+			retVal.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.TRUE);
+			ourFragmentOutputFactory = retVal;
+			return retVal;
+		}
+		return retVal;
+	}
+
+	
 	private static XMLOutputFactory getOrCreateOutputFactory() throws FactoryConfigurationError {
 		if (ourOutputFactory == null) {
-
-			try {
-				Class.forName("ca.uhn.fhir.repackage.javax.xml.stream.XMLOutputFactory");
-				System.setProperty("javax.xml.stream.XMLOutputFactory", "com.ctc.wstx.stax.WstxOutputFactory");
-			} catch (ClassNotFoundException e) {
-				// ok
-			}
-
-			XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
-
-			if (!ourHaveLoggedStaxImplementation) {
-				logStaxImplementation(outputFactory.getClass());
-			}
-
-			/*
-			 * Note that these properties are Woodstox specific and they cause a crash in environments where SJSXP is
-			 * being used (e.g. glassfish) so we don't set them there.
-			 */
-			try {
-				Class.forName("com.ctc.wstx.stax.WstxOutputFactory");
-				if (outputFactory instanceof WstxOutputFactory) {
-					outputFactory.setProperty(XMLOutputFactory2.P_TEXT_ESCAPER, new MyEscaper());
-				}
-			} catch (ClassNotFoundException e) {
-				ourLog.debug("WstxOutputFactory (Woodstox) not found on classpath");
-			}
-			ourOutputFactory = outputFactory;
+			ourOutputFactory = createOutputFactory();
 		}
 		return ourOutputFactory;
+	}
+
+	private static XMLOutputFactory createOutputFactory() throws FactoryConfigurationError {
+		try {
+			// Detect if we're running with the Android lib, and force repackaged Woodstox to be used
+			Class.forName("ca.uhn.fhir.repackage.javax.xml.stream.XMLOutputFactory");
+			System.setProperty("javax.xml.stream.XMLOutputFactory", "com.ctc.wstx.stax.WstxOutputFactory");
+		} catch (ClassNotFoundException e) {
+			// ok
+		}
+
+		XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
+
+		if (!ourHaveLoggedStaxImplementation) {
+			logStaxImplementation(outputFactory.getClass());
+		}
+
+		/*
+		 * Note that these properties are Woodstox specific and they cause a crash in environments where SJSXP is
+		 * being used (e.g. glassfish) so we don't set them there.
+		 */
+		try {
+			Class.forName("com.ctc.wstx.stax.WstxOutputFactory");
+			if (outputFactory instanceof WstxOutputFactory) {
+				outputFactory.setProperty(XMLOutputFactory2.P_TEXT_ESCAPER, new MyEscaper());
+			}
+		} catch (ClassNotFoundException e) {
+			ourLog.debug("WstxOutputFactory (Woodstox) not found on classpath");
+		}
+		return outputFactory;
 	}
 
 	private static URL getRootUrlForClass(Class<?> cls) {
@@ -1708,7 +1735,7 @@ public class XmlUtil {
 
 		@Override
 		public Writer createEscapingWriterFor(OutputStream theOut, String theEnc) throws UnsupportedEncodingException {
-			return createEscapingWriterFor(new OutputStreamWriter(theOut), theEnc);
+			return createEscapingWriterFor(new OutputStreamWriter(theOut, theEnc), theEnc);
 		}
 
 		@Override

@@ -2,7 +2,7 @@ package ca.uhn.fhir.rest.server.provider.dstu2;
 
 /*
  * #%L
- * HAPI FHIR Structures - DSTU2 (FHIR v0.5.0)
+ * HAPI FHIR Structures - DSTU2 (FHIR v1.0.0)
  * %%
  * Copyright (C) 2014 - 2015 University Health Network
  * %%
@@ -51,6 +51,7 @@ import ca.uhn.fhir.model.dstu2.valueset.SearchEntryModeEnum;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.model.primitive.InstantDt;
 import ca.uhn.fhir.model.valueset.BundleEntrySearchModeEnum;
+import ca.uhn.fhir.model.valueset.BundleEntryTransactionMethodEnum;
 import ca.uhn.fhir.model.valueset.BundleTypeEnum;
 import ca.uhn.fhir.rest.server.AddProfileTagEnum;
 import ca.uhn.fhir.rest.server.BundleInclusionRule;
@@ -69,6 +70,7 @@ public class Dstu2BundleFactory implements IVersionSpecificBundleFactory {
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(Dstu2BundleFactory.class);
 	private Bundle myBundle;
 	private FhirContext myContext;
+	private String myBase;
 
 	public Dstu2BundleFactory(FhirContext theContext) {
 		myContext = theContext;
@@ -145,6 +147,10 @@ public class Dstu2BundleFactory implements IVersionSpecificBundleFactory {
 			Entry entry = myBundle.addEntry().setResource(next);
 			if (next.getId().hasBaseUrl()) {
 				entry.setFullUrl(next.getId().getValue());
+			}
+			BundleEntryTransactionMethodEnum httpVerb = ResourceMetadataKeyEnum.ENTRY_TRANSACTION_METHOD.get(next);
+			if (httpVerb != null) {
+				entry.getRequest().getMethodElement().setValueAsString(httpVerb.getCode());
 			}
 		}
 
@@ -237,9 +243,11 @@ public class Dstu2BundleFactory implements IVersionSpecificBundleFactory {
 			} while (references.isEmpty() == false);
 
 			Entry entry = myBundle.addEntry().setResource(next);
-			if (next.getId().hasBaseUrl()) {
-				entry.setFullUrl(next.getId().getValue());
+			BundleEntryTransactionMethodEnum httpVerb = ResourceMetadataKeyEnum.ENTRY_TRANSACTION_METHOD.get(next);
+			if (httpVerb != null) {
+				entry.getRequest().getMethodElement().setValueAsString(httpVerb.getCode());
 			}
+			populateBundleEntryFullUrl(next, entry);
 			
 			BundleEntrySearchModeEnum searchMode = ResourceMetadataKeyEnum.ENTRY_SEARCH_MODE.get(next);
 			if (searchMode != null) {
@@ -253,16 +261,28 @@ public class Dstu2BundleFactory implements IVersionSpecificBundleFactory {
 		for (IResource next : includedResources) {
 			Entry entry = myBundle.addEntry();
 			entry.setResource(next).getSearch().setMode(SearchEntryModeEnum.INCLUDE);
-			if (next.getId().hasBaseUrl()) {
-				entry.setFullUrl(next.getId().getValue());
-			}
+			populateBundleEntryFullUrl(next, entry);
 		}
 
+	}
+
+	private void populateBundleEntryFullUrl(IResource next, Entry entry) {
+		if (next.getId().hasBaseUrl()) {
+			entry.setFullUrl(next.getId().toVersionless().getValue());
+		} else {
+			if (isNotBlank(myBase) && next.getId().hasIdPart()) {
+				IdDt id = next.getId().toVersionless();
+				id = id.withServerBase(myBase, myContext.getResourceDefinition(next).getName());
+				entry.setFullUrl(id.getValue());
+			}
+		}
 	}
 
 	@Override
 	public void addRootPropertiesToBundle(String theAuthor, String theServerBase, String theCompleteUrl, Integer theTotalResults, BundleTypeEnum theBundleType, IPrimitiveType<Date> theLastUpdated) {
 
+		myBase = theServerBase;
+		
 		if (myBundle.getId().isEmpty()) {
 			myBundle.setId(UUID.randomUUID().toString());
 		}
@@ -306,6 +326,8 @@ public class Dstu2BundleFactory implements IVersionSpecificBundleFactory {
 	@Override
 	public void initializeBundleFromBundleProvider(RestfulServer theServer, IBundleProvider theResult, EncodingEnum theResponseEncoding, String theServerBase, String theCompleteUrl,
 			boolean thePrettyPrint, int theOffset, Integer theLimit, String theSearchId, BundleTypeEnum theBundleType, Set<Include> theIncludes) {
+		myBase = theServerBase;
+		
 		int numToReturn;
 		String searchId = null;
 		List<IBaseResource> resourceList;

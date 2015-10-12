@@ -6,6 +6,9 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 
+import ca.uhn.fhir.rest.server.Constants;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+
 /*
  * #%L
  * HAPI FHIR - Core Library
@@ -29,6 +32,10 @@ import java.net.URLEncoder;
 public class UrlUtil {
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(UrlUtil.class);
 
+	public static void main(String[] args) {
+		System.out.println(escape("http://snomed.info/sct?fhir_vs=isa/126851005"));
+	}
+	
 	/**
 	 * Resolve a relative URL - THIS METHOD WILL NOT FAIL but will log a warning and return theEndpoint if the input is
 	 * invalid.
@@ -152,6 +159,98 @@ public class UrlUtil {
 			return URLEncoder.encode(theValue, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			throw new Error("UTF-8 not supported on this platform");
+		}
+	}
+	
+	//@formatter:off
+	/** 
+	 * Parse a URL in one of the following forms:
+	 * <ul>
+	 * <li>[Resource Type]?[Search Params]
+	 * <li>[Resource Type]/[Resource ID]
+	 * <li>[Resource Type]/[Resource ID]/_history/[Version ID]
+	 * </ul>
+	 */
+	//@formatter:on
+	public static UrlParts parseUrl(String theUrl) {
+		String url = theUrl;
+		if (url.matches("\\/[a-zA-Z]+\\?.*")) {
+			url = url.substring(1);
+		}
+		
+		UrlParts retVal = new UrlParts();
+
+		int nextStart = 0;
+		boolean nextIsHistory = false;
+
+		for (int idx = 0; idx < url.length(); idx++) {
+			char nextChar = url.charAt(idx);
+			boolean atEnd = (idx + 1) == url.length();
+			if (nextChar == '?' || nextChar == '/' || atEnd) {
+				int endIdx = atEnd ? idx + 1 : idx;
+				String nextSubstring = url.substring(nextStart, endIdx);
+				if (retVal.getResourceType() == null) {
+					retVal.setResourceType(nextSubstring);
+				} else if (retVal.getResourceId() == null) {
+					retVal.setResourceId(nextSubstring);
+				} else if (nextIsHistory) {
+					retVal.setVersionId(nextSubstring);
+				} else {
+					if (nextSubstring.equals(Constants.URL_TOKEN_HISTORY)) {
+						nextIsHistory = true;
+					} else {
+						throw new InvalidRequestException("Invalid FHIR resource URL: " + url);
+					}
+				}
+				if (nextChar == '?') {
+					if (url.length() > idx + 1) {
+						retVal.setParams(url.substring(idx + 1, url.length()));
+					}
+					break;
+				}
+				nextStart = idx + 1;
+			}
+		}
+
+		return retVal;
+	}
+
+	public static class UrlParts {
+		private String myParams;
+		private String myResourceId;
+		private String myResourceType;
+		private String myVersionId;
+
+		public String getParams() {
+			return myParams;
+		}
+
+		public String getResourceId() {
+			return myResourceId;
+		}
+
+		public String getResourceType() {
+			return myResourceType;
+		}
+
+		public String getVersionId() {
+			return myVersionId;
+		}
+
+		public void setParams(String theParams) {
+			myParams = theParams;
+		}
+
+		public void setResourceId(String theResourceId) {
+			myResourceId = theResourceId;
+		}
+
+		public void setResourceType(String theResourceType) {
+			myResourceType = theResourceType;
+		}
+
+		public void setVersionId(String theVersionId) {
+			myVersionId = theVersionId;
 		}
 	}
 

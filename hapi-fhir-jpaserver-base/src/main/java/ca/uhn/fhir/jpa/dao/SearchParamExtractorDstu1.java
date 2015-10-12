@@ -25,6 +25,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,11 +41,13 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.context.RuntimeSearchParam;
 import ca.uhn.fhir.jpa.entity.BaseResourceIndexedSearchParam;
+import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamCoords;
 import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamDate;
 import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamNumber;
 import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamQuantity;
 import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamString;
 import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamToken;
+import ca.uhn.fhir.jpa.entity.ResourceIndexedSearchParamUri;
 import ca.uhn.fhir.jpa.entity.ResourceTable;
 import ca.uhn.fhir.model.api.IDatatype;
 import ca.uhn.fhir.model.api.IPrimitiveDatatype;
@@ -72,8 +75,13 @@ public class SearchParamExtractorDstu1 extends BaseSearchParamExtractor implemen
 	}
 
 	@Override
-	public List<ResourceIndexedSearchParamDate> extractSearchParamDates(ResourceTable theEntity, IResource theResource) {
-		ArrayList<ResourceIndexedSearchParamDate> retVal = new ArrayList<ResourceIndexedSearchParamDate>();
+	public Set<ResourceIndexedSearchParamCoords> extractSearchParamCoords(ResourceTable theEntity, IResource theResource) {
+		return Collections.emptySet();
+	}
+
+	@Override
+	public Set<ResourceIndexedSearchParamDate> extractSearchParamDates(ResourceTable theEntity, IResource theResource) {
+		HashSet<ResourceIndexedSearchParamDate> retVal = new HashSet<ResourceIndexedSearchParamDate>();
 
 		RuntimeResourceDefinition def = getContext().getResourceDefinition(theResource);
 		for (RuntimeSearchParam nextSpDef : def.getSearchParams()) {
@@ -123,14 +131,12 @@ public class SearchParamExtractorDstu1 extends BaseSearchParamExtractor implemen
 			}
 		}
 
-		theEntity.setParamsDatePopulated(retVal.size() > 0);
-
 		return retVal;
 	}
 
 	@Override
-	public ArrayList<ResourceIndexedSearchParamNumber> extractSearchParamNumber(ResourceTable theEntity, IResource theResource) {
-		ArrayList<ResourceIndexedSearchParamNumber> retVal = new ArrayList<ResourceIndexedSearchParamNumber>();
+	public HashSet<ResourceIndexedSearchParamNumber> extractSearchParamNumber(ResourceTable theEntity, IResource theResource) {
+		HashSet<ResourceIndexedSearchParamNumber> retVal = new HashSet<ResourceIndexedSearchParamNumber>();
 
 		RuntimeResourceDefinition def = getContext().getResourceDefinition(theResource);
 		for (RuntimeSearchParam nextSpDef : def.getSearchParams()) {
@@ -220,14 +226,12 @@ public class SearchParamExtractorDstu1 extends BaseSearchParamExtractor implemen
 			}
 		}
 
-		theEntity.setParamsNumberPopulated(retVal.size() > 0);
-
 		return retVal;
 	}
 
 	@Override
-	public List<ResourceIndexedSearchParamQuantity> extractSearchParamQuantity(ResourceTable theEntity, IResource theResource) {
-		ArrayList<ResourceIndexedSearchParamQuantity> retVal = new ArrayList<ResourceIndexedSearchParamQuantity>();
+	public Set<ResourceIndexedSearchParamQuantity> extractSearchParamQuantity(ResourceTable theEntity, IResource theResource) {
+		HashSet<ResourceIndexedSearchParamQuantity> retVal = new HashSet<ResourceIndexedSearchParamQuantity>();
 
 		RuntimeResourceDefinition def = getContext().getResourceDefinition(theResource);
 		for (RuntimeSearchParam nextSpDef : def.getSearchParams()) {
@@ -270,14 +274,12 @@ public class SearchParamExtractorDstu1 extends BaseSearchParamExtractor implemen
 			}
 		}
 
-		theEntity.setParamsNumberPopulated(retVal.size() > 0);
-
 		return retVal;
 	}
 
 	@Override
-	public List<ResourceIndexedSearchParamString> extractSearchParamStrings(ResourceTable theEntity, IResource theResource) {
-		ArrayList<ResourceIndexedSearchParamString> retVal = new ArrayList<ResourceIndexedSearchParamString>();
+	public Set<ResourceIndexedSearchParamString> extractSearchParamStrings(ResourceTable theEntity, IResource theResource) {
+		HashSet<ResourceIndexedSearchParamString> retVal = new HashSet<ResourceIndexedSearchParamString>();
 
 		RuntimeResourceDefinition def = getContext().getResourceDefinition(theResource);
 		for (RuntimeSearchParam nextSpDef : def.getSearchParams()) {
@@ -358,14 +360,12 @@ public class SearchParamExtractorDstu1 extends BaseSearchParamExtractor implemen
 			}
 		}
 
-		theEntity.setParamsStringPopulated(retVal.size() > 0);
-
 		return retVal;
 	}
 
 	@Override
-	public List<BaseResourceIndexedSearchParam> extractSearchParamTokens(ResourceTable theEntity, IResource theResource) {
-		ArrayList<BaseResourceIndexedSearchParam> retVal = new ArrayList<BaseResourceIndexedSearchParam>();
+	public Set<BaseResourceIndexedSearchParam> extractSearchParamTokens(ResourceTable theEntity, IResource theResource) {
+		HashSet<BaseResourceIndexedSearchParam> retVal = new HashSet<BaseResourceIndexedSearchParam>();
 
 		RuntimeResourceDefinition def = getContext().getResourceDefinition(theResource);
 		for (RuntimeSearchParam nextSpDef : def.getSearchParams()) {
@@ -468,9 +468,12 @@ public class SearchParamExtractorDstu1 extends BaseSearchParamExtractor implemen
 
 		}
 
-		theEntity.setParamsTokenPopulated(retVal.size() > 0);
-
 		return retVal;
+	}
+
+	@Override
+	public Set<ResourceIndexedSearchParamUri> extractSearchParamUri(ResourceTable theEntity, IResource theResource) {
+		return Collections.emptySet();
 	}
 
 }

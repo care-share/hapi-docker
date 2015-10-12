@@ -63,6 +63,7 @@ import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.interceptor.IServerInterceptor;
+import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import ca.uhn.fhir.util.ReflectionUtil;
 import ca.uhn.fhir.util.UrlUtil;
 
@@ -81,6 +82,7 @@ abstract class BaseResourceReturningMethodBinding extends BaseMethodBinding<Obje
 		set.add(Constants.PARAM_COUNT);
 		set.add(Constants.PARAM_SUMMARY);
 		set.add(Constants.PARAM_ELEMENTS);
+		set.add(ResponseHighlighterInterceptor.PARAM_RAW);
 		ALLOWED_PARAMS = Collections.unmodifiableSet(set);
 	}
 
@@ -243,7 +245,7 @@ abstract class BaseResourceReturningMethodBinding extends BaseMethodBinding<Obje
 		Set<SummaryEnum> summaryMode = RestfulServerUtils.determineSummaryMode(theRequest);
 
 		// Determine response encoding
-		EncodingEnum responseEncoding = RestfulServerUtils.determineResponseEncodingNoDefault(theRequest.getServletRequest());
+		EncodingEnum responseEncoding = RestfulServerUtils.determineResponseEncodingNoDefault(theRequest.getServletRequest(), theServer.getDefaultResponseEncoding());
 
 		// Is this request coming from a browser
 		String uaHeader = theRequest.getServletRequest().getHeader("user-agent");

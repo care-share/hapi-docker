@@ -101,7 +101,7 @@ public abstract class BaseHapiFhirSystemDao<T> extends BaseHapiFhirDao<IBaseReso
 				for (ResourceTable resourceTable : resources) {
 					final IBaseResource resource;
 					try {
-						resource = toResource(resourceTable);
+						resource = toResource(resourceTable, false);
 					} catch (DataFormatException e) {
 						ourLog.warn("Failure parsing resource: {}", e.toString());
 						throw new UnprocessableEntityException(Long.toString(resourceTable.getId()));
@@ -121,7 +121,7 @@ public abstract class BaseHapiFhirSystemDao<T> extends BaseHapiFhirDao<IBaseReso
 					try {
 						dao.update(resource, null, true);
 					} catch (Exception e) {
-						ourLog.error("Failed to index resource {}: {}", new Object[] { resource.getIdElement(), e.toString() });
+						ourLog.error("Failed to index resource {}: {}", new Object[] { resource.getIdElement(), e.toString(), e });
 						throw new UnprocessableEntityException(Long.toString(resourceTable.getId()));
 					}
 					count++;
